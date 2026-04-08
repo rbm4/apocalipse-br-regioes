@@ -1,0 +1,20 @@
+{
+    "$schema": "https://raw.githubusercontent.com/escapepz/project-zomboid-studio/refs/heads/b42.13.1/pzstudio.schema.json",
+    "title": "ApocalipseBR Regioes",
+    "authors": [
+        "Hypothetic"
+    ],
+    "workshop": {
+        "visibility": "unlisted",
+        "tags": [
+            "Build 42"
+        ],
+        "excludes": []
+    },
+    "mods": {
+        "Apocalipsebr-regions": {
+            "name": "ApocalipseBR - Regioes",
+            "description": "Custom region management with PVP zones, zombie density control, sprinter zones, and sprinter screaming. Sprinter scream feature originally by SIMBAproduz."
+        }
+    }
+}

@@ -1,0 +1,8 @@
+name=ApocalipseBR - Regioes
+id=ApocalipseBR_Regioes
+poster=poster.png
+icon=icon.png
+author=Hypothetic
+modversion=0.1.0
+versionMin=42.14.0
+description=Custom region management with PVP zones, zombie density control, sprinter zones, and sprinter screaming system. Sprinter scream feature originally by SIMBAproduz (theySEE YOU).
