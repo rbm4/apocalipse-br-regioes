@@ -208,14 +208,6 @@ function ISRegionManagerAdminPanel:new(x, y, width, height)
     return o
 end
 
--- Helper function to check if player is admin or in debug mode
-local function isAdminOrDebug(player)
-    if not player then return false end
-    
-    -- Check access level
-    local accessLevel = player:getAccessLevel()
-    return accessLevel == "admin" or accessLevel == "moderator"
-end
 
 -- Public function to open the admin panel
 function RegionManager.AdminPanel.Open()
@@ -223,8 +215,7 @@ function RegionManager.AdminPanel.Open()
     if not player then return end
     
     -- Check admin access or debug mode
-    if not isAdminOrDebug(player) then
-        player:Say("Access denied. Admin only.", 1, 0.3, 0.3, UIFont.Medium, 2, "radio")
+    if not isDebugEnabled() then
         return
     end
     
@@ -247,7 +238,7 @@ local function OnFillWorldObjectContextMenu(player, context, worldobjects, test)
     if not player then return end
     
     -- Only show for admins or debug mode
-    if not isAdminOrDebug(player) then return end
+    if not isDebugEnabled() then return end
     
     -- Add admin menu option (simple version without tooltip)
     context:addOption("Region Manager (Admin)", nil, RegionManager.AdminPanel.Open)

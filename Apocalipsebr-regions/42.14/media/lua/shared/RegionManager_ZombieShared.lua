@@ -770,9 +770,21 @@ function RegionManager.Shared.ServerSideProperties(zombie, data, sandboxOptions)
     end
 
     -- ========================================================================
-    -- KILL BONUS — difficulty-based reward stored in modData
+    -- KILL BONUS — module override or difficulty-based computation
     -- ========================================================================
     local killBonus = 0
+
+    -- Check if this zombie belongs to a registered module with a flat killBonus
+    if data._moduleId then
+        require "RegionManager_ZombieModules"
+        local moduleDef = RegionManager.ZombieModules.getById(data._moduleId)
+        if moduleDef and moduleDef.stats and moduleDef.stats.killBonus then
+            killBonus = moduleDef.stats.killBonus
+            modData.Apocalipse_TSY_KillBonus = math.max(0, killBonus)
+            return -- skip computed bonus
+        end
+    end
+
     if data.isSprinter then killBonus = killBonus + 5 end
     if data.isShambler then killBonus = killBonus - 5 end
     if data.hawkVision then killBonus = killBonus + 1 end

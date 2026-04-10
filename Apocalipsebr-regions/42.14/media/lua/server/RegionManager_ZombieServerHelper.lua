@@ -14,6 +14,7 @@ end
 -- Ensure parent table exists so RegionManager_Config can attach to it
 RegionManager = RegionManager or {}
 require "RegionManager_Config"
+require "RegionManager_ZombieModules"
 
 local ZombieHelper = {}
 
@@ -324,10 +325,17 @@ function ZombieHelper.BuildConfirmPayload(zombieID, stored)
     -- Format: BBBBBBBBB SXXXXX SYYYYY MM  (23 chars, no separators)
     local r = string.format("%09d%d%05d%d%05d%02d", bits, xSign, xAbs, ySign, yAbs, maxHits)
 
-    return {
+    local payload = {
         z = zombieID,
         r = r,
     }
+
+    -- Protocol v3: include module ID if this zombie belongs to a registered module
+    if stored._moduleId then
+        payload.m = stored._moduleId
+    end
+
+    return payload
 end
 
 -- ============================================================================
@@ -367,6 +375,23 @@ function ZombieHelper.FindZombieByOnlineID(zombieID)
         end
     end
     return nil
+end
+
+-- ============================================================================
+-- Module-aware decision resolution
+-- ============================================================================
+
+--- Check if an outfit name matches a registered zombie module.
+--- If matched, build guaranteed decisions from the module's stats (no RNG).
+---@param outfitName string|nil  The zombie's outfit name
+---@param x number               World X coordinate
+---@param y number               World Y coordinate
+---@return table|nil decisions   Module decisions, or nil if no module matched
+function ZombieHelper.ResolveModuleOverrides(outfitName, x, y)
+    if not outfitName then return nil end
+    local moduleDef = RegionManager.ZombieModules.getByOutfit(outfitName)
+    if not moduleDef then return nil end
+    return RegionManager.ZombieModules.buildDecisions(moduleDef, x, y)
 end
 
 return ZombieHelper

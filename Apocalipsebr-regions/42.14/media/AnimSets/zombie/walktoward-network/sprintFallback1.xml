@@ -3,8 +3,9 @@
      Mirrors walktoward/sprintFallback1.xml for the network AnimSet. -->
 <animNode>
 	<m_Name>sprintFallback1</m_Name>
-	<m_AnimName>Zombie_Walk5</m_AnimName>
-	<m_SpeedScale>0.80</m_SpeedScale>
+	<m_AnimName>Zombie_Sprint</m_AnimName>
+	<m_deferredBoneAxis>Y</m_deferredBoneAxis>
+	<m_SpeedScale>1.09</m_SpeedScale>
 	<m_BlendTime>0.35</m_BlendTime>
 	<m_randomAdvanceFraction>0.25</m_randomAdvanceFraction>
 	<m_Conditions>
@@ -20,11 +21,11 @@
 	<m_Events>
 		<m_EventName>Footstep</m_EventName>
 		<m_TimePc>0.15</m_TimePc>
-		<m_ParameterValue>walk</m_ParameterValue>
+		<m_ParameterValue>sprint</m_ParameterValue>
 	</m_Events>
 	<m_Events>
 		<m_EventName>Footstep</m_EventName>
 		<m_TimePc>0.6</m_TimePc>
-		<m_ParameterValue>walk</m_ParameterValue>
+		<m_ParameterValue>sprint</m_ParameterValue>
 	</m_Events>
 </animNode>

@@ -5,6 +5,8 @@ end
 require "RegionManager_Config"
 require "RegionManager_ClientTick"
 require "RegionManager_ZombieShared"
+require "RegionManager_ZombieModules"
+require "RegionManager_ZombieModuleClient"
 
 local sandboxOptions = getSandboxOptions()
 
@@ -261,6 +263,18 @@ local function Apocalipse_TSY_OnServerCommand(module, command, args)
                     print("  -> Converted to Shambler")
                 end
 
+                -- Module zombie: initialize client-side sound/behavior tracking
+                if args.m then
+                    RegionManager.ZombieModuleClient.initZombie(zombie, args.m)
+                    -- Apply bossHealth override if the module defines it
+                    local moduleDef = RegionManager.ZombieModules.getById(args.m)
+                    if moduleDef and moduleDef.stats and moduleDef.stats.bossHealth then
+                        if zombie:getHealth() < moduleDef.stats.bossHealth then
+                            zombie:setHealth(moduleDef.stats.bossHealth)
+                        end
+                    end
+                end
+
                 break
             end
         end
@@ -321,7 +335,8 @@ local function Apocalipse_TSY_ProcessPending()
                         zombieID = onlineID,
                         persistentID = persistentID,
                         x = zombie:getX(),
-                        y = zombie:getY()
+                        y = zombie:getY(),
+                        outfitName = zombie:getOutfitName(),
                     })
 
                     -- Remove from queue (swap with last)

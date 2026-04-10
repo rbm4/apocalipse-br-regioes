@@ -221,8 +221,25 @@ local function Apocalipse_TSY_OnClientCommand(module, command, player, args)
             if stored then
                 found = found + 1
             else
-                -- First time or stale – resolve now
-                stored = RegionManagerZombie_OnZombieCreate(persistentID, request.x, request.y)
+                -- Check if zombie matches a registered module (by outfit name)
+                local outfitName = request.outfitName
+                -- Fallback: look up outfit server-side if client didn't send it
+                if not outfitName then
+                    local serverZombie = ZombieHelper.FindZombieByOnlineID(zombieID)
+                    if serverZombie then
+                        outfitName = serverZombie:getOutfitName()
+                    end
+                end
+
+                local moduleDecisions = ZombieHelper.ResolveModuleOverrides(outfitName, request.x, request.y)
+                if moduleDecisions then
+                    -- Module zombie: use guaranteed overrides instead of region RNG
+                    stored = moduleDecisions
+                    globalData.zombies[persistentID] = stored
+                else
+                    -- Normal zombie: resolve via region-based rolling
+                    stored = RegionManagerZombie_OnZombieCreate(persistentID, request.x, request.y)
+                end
                 notFound = notFound + 1
             end
 

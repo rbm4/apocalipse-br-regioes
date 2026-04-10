@@ -369,6 +369,7 @@ local function Apocalipse_TSY_OnZombieUpdate(zombie)
     if modData.Apocalipse_TSY_IgnoreAlertUntil and Apocalipse_TSY_TickCounter < modData.Apocalipse_TSY_IgnoreAlertUntil then
         return
     end
+    
     if not Apocalipse_TSY_TimeAllowed() then
         return
     end
