@@ -3,7 +3,7 @@
 	<m_Name>sprintFallback2</m_Name>
 	<m_AnimName>Zombie_Sprint</m_AnimName>
 	<m_deferredBoneAxis>Y</m_deferredBoneAxis>
-	<m_SpeedScale>1.09</m_SpeedScale>
+	<m_SpeedScale>0.90</m_SpeedScale>
 	<m_BlendTime>0.35</m_BlendTime>
 	<m_randomAdvanceFraction>0.25</m_randomAdvanceFraction>
 	<m_Conditions>
