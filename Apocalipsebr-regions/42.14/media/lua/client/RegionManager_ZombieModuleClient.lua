@@ -46,6 +46,20 @@ local VANILLA_VOICE_SOUNDS = {
 -- Public API: called from RegionManager_ZombieClient on ConfirmZombie
 -- ============================================================================
 
+--- Check whether a zombie's current outfit matches any of a module's outfitNames.
+---@param zombie IsoZombie
+---@param moduleDef table
+---@return boolean
+local function outfitMatchesModule(zombie, moduleDef)
+    if not moduleDef or not moduleDef.outfitNames then return false end
+    local outfit = zombie:getOutfitName()
+    if not outfit then return false end
+    for _, name in ipairs(moduleDef.outfitNames) do
+        if outfit == name then return true end
+    end
+    return false
+end
+
 --- Initialize tracking for a module zombie after ConfirmZombie.
 ---@param zombie IsoZombie
 ---@param moduleId string  The module ID from the server payload (args.m)
@@ -55,6 +69,14 @@ function RegionManager.ZombieModuleClient.initZombie(zombie, moduleId)
     local moduleDef = RegionManager.ZombieModules.getById(moduleId)
     if not moduleDef then
         print("RegionManager.ZombieModuleClient: Unknown module '" .. tostring(moduleId) .. "'")
+        return
+    end
+
+    -- Only track zombies whose outfit actually matches the module definition
+    if not outfitMatchesModule(zombie, moduleDef) then
+        print("RegionManager.ZombieModuleClient: Zombie outfit '" ..
+              tostring(zombie:getOutfitName()) .. "' does not match module '" ..
+              moduleId .. "', skipping")
         return
     end
 
@@ -218,6 +240,13 @@ local function onZombieUpdate(zombie)
 
     -- Dead zombie: fade out theme and clean up
     if zombie:isDead() then
+        beginThemeFadeOut(zombie, data)
+        trackedZombies[id] = nil
+        return
+    end
+
+    -- Validate outfit still matches the module (guards against recycled onlineIDs)
+    if not outfitMatchesModule(zombie, data.moduleDef) then
         beginThemeFadeOut(zombie, data)
         trackedZombies[id] = nil
         return

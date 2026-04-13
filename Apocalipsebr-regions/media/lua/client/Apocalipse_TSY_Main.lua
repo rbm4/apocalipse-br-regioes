@@ -1,8 +1,3 @@
---        __     __                   
--- _|_   (_ ||\/|__) /\ _ _ _ _|   _  
---  |    __)||  |__)/--|_| (_(_||_|/_ 
---                     |              
-
 -- SLOTS DE VOZ
 local Apocalipse_TSY_MaxSlots             = 62     -- quantidade de slots de voz ABMIS (1..128)
 

@@ -269,15 +269,31 @@ local function Apocalipse_TSY_OnServerCommand(module, command, args)
                 end
 
                 -- Module zombie: initialize client-side sound/behavior tracking
+                -- Only if the zombie's outfit actually matches the module definition
                 if args.m then
-                    modData.Apocalipse_TSY_IsModuleZombie = true
-                    RegionManager.ZombieModuleClient.initZombie(zombie, args.m)
-                    -- Apply bossHealth override if the module defines it
                     local moduleDef = RegionManager.ZombieModules.getById(args.m)
-                    if moduleDef and moduleDef.stats and moduleDef.stats.bossHealth then
-                        if zombie:getHealth() < moduleDef.stats.bossHealth then
-                            zombie:setHealth(moduleDef.stats.bossHealth)
+                    local outfitName = zombie:getOutfitName()
+                    local outfitValid = false
+                    if moduleDef and moduleDef.outfitNames and outfitName then
+                        for _, name in ipairs(moduleDef.outfitNames) do
+                            if outfitName == name then
+                                outfitValid = true
+                                break
+                            end
                         end
+                    end
+                    if outfitValid then
+                        modData.Apocalipse_TSY_IsModuleZombie = true
+                        RegionManager.ZombieModuleClient.initZombie(zombie, args.m)
+                        -- Apply bossHealth override if the module defines it
+                        if moduleDef and moduleDef.stats and moduleDef.stats.bossHealth then
+                            if zombie:getHealth() < moduleDef.stats.bossHealth then
+                                zombie:setHealth(moduleDef.stats.bossHealth)
+                            end
+                        end
+                    else
+                        print("Apocalipse_TSY: Zombie outfit '" .. tostring(outfitName) ..
+                              "' does not match module '" .. tostring(args.m) .. "', skipping module init")
                     end
                 end
 
