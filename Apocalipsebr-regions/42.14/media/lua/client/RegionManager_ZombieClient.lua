@@ -109,7 +109,7 @@ local PendingZombies = {
 ---@param zombie IsoZombie
 local function onZombieCreate(zombie)
     if not zombie then return end
-    -- Only process remote (network-synced) zombies on the client
+    -- Process all zombies on the client
     PendingZombies.count = PendingZombies.count + 1
     PendingZombies.queue[PendingZombies.count] = zombie
 end
@@ -243,6 +243,11 @@ local function Apocalipse_TSY_OnServerCommand(module, command, args)
         for i = 0, zombieList:size() - 1 do
             local zombie = zombieList:get(i)
             if zombie and not zombie:isDead() and zombie:getOnlineID() == zombieID then
+                -- Pass module ID into data so ServerSideProperties can use it for kill bonus
+                if args.m then
+                    data.moduleId = args.m
+                end
+
                 -- Apply all server-determined properties using the shared function
                 RegionManager.Shared.ServerSideProperties(zombie, data, sandboxOptions)
 
@@ -265,6 +270,7 @@ local function Apocalipse_TSY_OnServerCommand(module, command, args)
 
                 -- Module zombie: initialize client-side sound/behavior tracking
                 if args.m then
+                    modData.Apocalipse_TSY_IsModuleZombie = true
                     RegionManager.ZombieModuleClient.initZombie(zombie, args.m)
                     -- Apply bossHealth override if the module defines it
                     local moduleDef = RegionManager.ZombieModules.getById(args.m)

@@ -2,7 +2,7 @@
 <animNode x_extends="sprintToward.xml">
 	<m_Name>sprint3</m_Name>
 	<m_AnimName>Zombie_Sprint05</m_AnimName>
-	<m_SpeedScale>0.80</m_SpeedScale>
+	<m_SpeedScale>0.70</m_SpeedScale>
 	<m_Conditions>
 		<m_Name>shouldSprint</m_Name>
 	</m_Conditions>

@@ -748,23 +748,28 @@ function RegionManager.Shared.ServerSideProperties(zombie, data, sandboxOptions)
     -- ========================================================================
     -- TOUGHNESS (HP-based) — applied after cycle since DoZombieStats
     -- does not touch health.
+    -- Always set toughness modData so the hit system recognizes this zombie.
+    -- Only modify health when the zombie is not mid-combat. 
     -- ========================================================================
-    if not zombie:getAttackedBy() and not zombie:isOnFire() then
-        local health = 0.1 * ZombRand(4) -- Random 0.0 to 0.3 base
-        if data.isTough then
-            local maxHits = data.maxHits or RegionManager.Shared.DEFAULT_MAX_HITS
-            health = health + maxHits
-            modData.Apocalipse_TSY_ToughnessType = "tough"
-            modData.Apocalipse_TSY_ToughnessHitCounter = 0
-            modData.Apocalipse_TSY_ToughnessMaxHits = maxHits
+    if data.isTough then
+        local maxHits = data.maxHits or RegionManager.Shared.DEFAULT_MAX_HITS
+        modData.Apocalipse_TSY_ToughnessType = "tough"
+        modData.Apocalipse_TSY_ToughnessHitCounter = 0
+        modData.Apocalipse_TSY_ToughnessMaxHits = maxHits
+        if not zombie:getAttackedBy() and not zombie:isOnFire() then
+            local health = 0.1 * ZombRand(4) + 2.0
             zombie:setHealth(health)
-        elseif data.isFragile then
-            health = health + 0.5
-            modData.Apocalipse_TSY_ToughnessType = "fragile"
+        end
+    elseif data.isFragile then
+        modData.Apocalipse_TSY_ToughnessType = "fragile"
+        if not zombie:getAttackedBy() and not zombie:isOnFire() then
+            local health = 0.1 * ZombRand(4) + 0.5
             zombie:setHealth(health)
-        elseif data.isNormalToughness then
-            health = health + 1.5
-            modData.Apocalipse_TSY_ToughnessType = "normal"
+        end
+    elseif data.isNormalToughness then
+        modData.Apocalipse_TSY_ToughnessType = "normal"
+        if not zombie:getAttackedBy() and not zombie:isOnFire() then
+            local health = 0.1 * ZombRand(4) + 1.5
             zombie:setHealth(health)
         end
     end
@@ -775,9 +780,9 @@ function RegionManager.Shared.ServerSideProperties(zombie, data, sandboxOptions)
     local killBonus = 0
 
     -- Check if this zombie belongs to a registered module with a flat killBonus
-    if data._moduleId then
+    if data.moduleId then
         require "RegionManager_ZombieModules"
-        local moduleDef = RegionManager.ZombieModules.getById(data._moduleId)
+        local moduleDef = RegionManager.ZombieModules.getById(data.moduleId)
         if moduleDef and moduleDef.stats and moduleDef.stats.killBonus then
             killBonus = moduleDef.stats.killBonus
             modData.Apocalipse_TSY_KillBonus = math.max(0, killBonus)
@@ -785,8 +790,8 @@ function RegionManager.Shared.ServerSideProperties(zombie, data, sandboxOptions)
         end
     end
 
-    if data.isSprinter then killBonus = killBonus + 5 end
-    if data.isShambler then killBonus = killBonus - 5 end
+    if data.isSprinter then killBonus = killBonus + 3 end
+    if data.isShambler then killBonus = killBonus - 3 end
     if data.hawkVision then killBonus = killBonus + 1 end
     if data.poorVision or data.badVision then killBonus = killBonus - 1 end
     if data.pinpointHearing or data.goodHearing then killBonus = killBonus + 1 end

@@ -3,7 +3,7 @@
 	<m_Name>sprint2</m_Name>
 	<m_AnimName>Zombie_Sprint03</m_AnimName>
 	<m_deferredBoneAxis>Y</m_deferredBoneAxis>
-	<m_SpeedScale>0.57</m_SpeedScale>
+	<m_SpeedScale>0.65</m_SpeedScale>
 	<m_Conditions />
 	<m_Conditions>
 		<m_Name>zombieWalkType</m_Name>

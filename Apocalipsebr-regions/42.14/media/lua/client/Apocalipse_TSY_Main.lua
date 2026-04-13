@@ -363,9 +363,14 @@ local function Apocalipse_TSY_OnZombieUpdate(zombie)
     if not Apocalipse_TSY_IsSprinter(zombie) then
         return
     end
+
+    -- Skip registered module zombies (bosses) — they have their own sound system
+    local modData = zombie:getModData()
+    if modData.Apocalipse_TSY_IsModuleZombie then
+        return
+    end
     
     -- Skip if zombie should ignore alerts (recently screamed)
-    local modData = zombie:getModData()
     if modData.Apocalipse_TSY_IgnoreAlertUntil and Apocalipse_TSY_TickCounter < modData.Apocalipse_TSY_IgnoreAlertUntil then
         return
     end
