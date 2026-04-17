@@ -16,6 +16,7 @@ end
 
 require "RegionManager_Config"
 require "RegionManager_ZombieModules"
+require "RegionManager_ZombieShared"
 
 RegionManager.ZombieModuleClient = RegionManager.ZombieModuleClient or {}
 
@@ -86,7 +87,7 @@ function RegionManager.ZombieModuleClient.initZombie(zombie, moduleId, opts)
         return
     end
 
-    local id = zombie:getOnlineID()
+    local id = RegionManager.Shared.GetZombiePersistentID(zombie)
 
     -- Build periodic sound state (one timer per periodic entry)
     local periodicState = {}
@@ -325,7 +326,7 @@ end
 local function onZombieUpdate(zombie)
     if not zombie then return end
 
-    local id = zombie:getOnlineID()
+    local id = RegionManager.Shared.GetZombiePersistentID(zombie)
     local data = trackedZombies[id]
     if not data then return end
 
@@ -487,7 +488,7 @@ local function onWeaponHitCharacter(attacker, target, weapon, damage)
     if not player or attacker ~= player then return end
     if not instanceof(target, "IsoZombie") or not target:isAlive() then return end
 
-    local id = target:getOnlineID()
+    local id = RegionManager.Shared.GetZombiePersistentID(target)
     local data = trackedZombies[id]
     if not data then return end
 

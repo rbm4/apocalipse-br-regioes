@@ -104,6 +104,15 @@ local PendingZombies = {
     count = 0,
 }
 
+-- ============================================================================
+-- PendingConfirmations: O(1) lookup map for ConfirmZombie responses.
+-- Keyed by PersistentID (stable across ownership transfers).
+-- If a new zombie shares a PersistentID but is >500 tiles away, the old
+-- entry is considered stale (recycled zombie) and gets replaced.
+-- ============================================================================
+local PendingConfirmations = {}  -- { [persistentID] = { zombieRef, x, y, onlineID } }
+local PendingIDIndex = {}        -- { [onlineID] = persistentID } reverse lookup
+
 --- OnZombieCreate handler: queue newly spawned remote zombies for processing.
 --- Do NOT read getOnlineID() here - it is not set yet at event time.
 ---@param zombie IsoZombie
@@ -230,46 +239,54 @@ local function Apocalipse_TSY_OnServerCommand(module, command, args)
         local data = decodeConfirmPayload(args)
         local zombieID = data.zombieID
 
-        local cell = player:getCell()
-        if not cell then
+        -- O(1) lookup via PendingConfirmations map (keyed by persistentID)
+        local persistentID = PendingIDIndex[zombieID]
+        if not persistentID then
             return
         end
 
-        local zombieList = cell:getZombieList()
-        if not zombieList then
+        local entry = PendingConfirmations[persistentID]
+        if not entry then
+            PendingIDIndex[zombieID] = nil
             return
         end
-        -- Find zombie and apply all properties using shared function
-        for i = 0, zombieList:size() - 1 do
-            local zombie = zombieList:get(i)
-            if zombie and not zombie:isDead() and zombie:getOnlineID() == zombieID then
-                -- Pass module ID into data so ServerSideProperties can use it for kill bonus
-                if args.m then
-                    data.moduleId = args.m
-                end
 
-                -- Apply all server-determined properties using the shared function
-                RegionManager.Shared.ServerSideProperties(zombie, data, sandboxOptions)
+        local zombie = entry.zombieRef
 
-                -- Cache the raw payload for revalidation without server roundtrip
-                local modData = zombie:getModData()
-                modData.Apocalipse_TSY_CachedPayload = args.r
-                modData.Apocalipse_TSY_CachedMaxHits = data.maxHits
+        -- Validate: ref must be alive and still have the expected onlineID
+        if not zombie or zombie:isDead() or zombie:getOnlineID() ~= zombieID then
+            PendingConfirmations[persistentID] = nil
+            PendingIDIndex[zombieID] = nil
+            return
+        end
 
-                -- Add to SpeedTracker if speed override was applied
-                if data.isSprinter or data.isShambler then
-                    SpeedTracker.add(zombie)
-                end
+        -- Consume the entry
+        PendingConfirmations[persistentID] = nil
+        PendingIDIndex[zombieID] = nil
 
-                if data.isSprinter then
-                    print("  -> Converted to Sprinter (lunger=" .. tostring(zombie.lunger) .. ")")
-                end
-                if data.isShambler then
-                    print("  -> Converted to Shambler")
-                end
+        -- Pass module ID into data so ServerSideProperties can use it for kill bonus
+        if args.m then
+            data.moduleId = args.m
+        end
 
-                break
-            end
+        -- Apply all server-determined properties using the shared function
+        RegionManager.Shared.ServerSideProperties(zombie, data, sandboxOptions)
+
+        -- Cache the raw payload for revalidation without server roundtrip
+        local modData = zombie:getModData()
+        modData.Apocalipse_TSY_CachedPayload = args.r
+        modData.Apocalipse_TSY_CachedMaxHits = data.maxHits
+
+        -- Add to SpeedTracker if speed override was applied
+        if data.isSprinter or data.isShambler then
+            SpeedTracker.add(zombie)
+        end
+
+        if data.isSprinter then
+            print("  -> Converted to Sprinter (lunger=" .. tostring(zombie.lunger) .. ")")
+        end
+        if data.isShambler then
+            print("  -> Converted to Shambler")
         end
     end
 end
@@ -332,6 +349,25 @@ local function Apocalipse_TSY_ProcessPending()
                         outfitName = zombie:getOutfitName(),
                     })
 
+                    -- Store in PendingConfirmations for O(1) lookup on ConfirmZombie
+                    local zx, zy = zombie:getX(), zombie:getY()
+                    local existing = PendingConfirmations[persistentID]
+                    if existing then
+                        -- Same persistentID: if >500 tiles away, old entry is stale (recycled zombie)
+                        local dx = existing.x - zx
+                        local dy = existing.y - zy
+                        if (dx * dx + dy * dy) > 250000 then -- 500^2
+                            PendingIDIndex[existing.onlineID] = nil
+                        end
+                    end
+                    PendingConfirmations[persistentID] = {
+                        zombieRef = zombie,
+                        x = zx,
+                        y = zy,
+                        onlineID = onlineID,
+                    }
+                    PendingIDIndex[onlineID] = persistentID
+
                     -- Remove from queue (swap with last)
                     PendingZombies.queue[i] = PendingZombies.queue[PendingZombies.count]
                     PendingZombies.queue[PendingZombies.count] = nil
@@ -384,6 +420,14 @@ local function onZombieDead(zombie)
 
     -- Clean up SpeedTracker entry
     SpeedTracker.remove(zombie:getOnlineID())
+
+    -- Clean up PendingConfirmations if zombie dies before confirmation
+    local deadOnlineID = zombie:getOnlineID()
+    local deadPersistentID = PendingIDIndex[deadOnlineID]
+    if deadPersistentID then
+        PendingConfirmations[deadPersistentID] = nil
+        PendingIDIndex[deadOnlineID] = nil
+    end
 
     local player = getPlayer()
     if not player then
