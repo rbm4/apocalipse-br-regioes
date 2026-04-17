@@ -70,6 +70,9 @@ RegionManager.ZombieModules._byId = RegionManager.ZombieModules._byId or {}
 ---     redirectToPlayer?      boolean  Pathfind to owning player
 ---     redirectCooldownTicks? number   Ticks between redirect attempts
 ---     detectionRange?        number   Max distance (tiles) for tracking
+---     smashObstacles?        boolean  Damage/destroy windows and doors blocking the path
+---     smashCooldownTicks?    number   Ticks between smash attempts (default 60)
+---     smashDamage?           number   Damage per smash tick to barricades/doors (default 25)
 function RegionManager.ZombieModules.register(moduleDef)
     if not moduleDef or not moduleDef.id then
         print("RegionManager.ZombieModules: ERROR - register() requires an 'id' field")

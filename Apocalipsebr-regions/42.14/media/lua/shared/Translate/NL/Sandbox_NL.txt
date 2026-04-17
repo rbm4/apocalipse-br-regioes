@@ -27,7 +27,7 @@ Sandbox_NL = {
     Sandbox_Apocalipse_TSY_FarRange_tooltip = "Maximale afstand (in tiles) waarop de ontdekkingsschreeuw in 3D hoorbaar is. Hogere waarden laten het geluid verder dragen, waardoor je sprinters hoort voordat je ze ziet. Ideaal voor open gebieden.",
 
     Sandbox_Apocalipse_TSY_AlertNearbyZombies = "Schreeuw trekt nabijgelegen zombies aan",
-    Sandbox_Apocalipse_TSY_AlertNearbyZombies_tooltip = "Wanneer ingeschakeld, gebruikt de schreeuw het spelsoundsysteem om zombies binnen een ingesteld bereik aan te trekken. Uitgeschakeld maakt de schreeuw puur cosmetisch — het beïnvloedt de AI niet. Perfect voor spelers die sfeer willen zonder extra moeilijkheid.",
+    Sandbox_Apocalipse_TSY_AlertNearbyZombies_tooltip = "Wanneer ingeschakeld, gebruikt de schreeuw het spelsoundsysteem om zombies binnen een ingesteld bereik aan te trekken. Uitgeschakeld maakt de schreeuw puur cosmetisch - het beïnvloedt de AI niet. Perfect voor spelers die sfeer willen zonder extra moeilijkheid.",
 
     Sandbox_Apocalipse_TSY_AlertRadius = "Aantrekkingsradius van horde (tiles)",
     Sandbox_Apocalipse_TSY_AlertRadius_tooltip = "De grootte van het gebied waarin zombies de schreeuw horen en naar de bron bewegen. Voorbeeld: 20 = slechts de straat eromheen; 80–100 = het halve district. Hoge waarden veranderen elke schreeuw in een mini-horde-event.",
@@ -51,6 +51,6 @@ Sandbox_NL = {
     Sandbox_Apocalipse_TSY_EnableNearScream_tooltip = "Wanneer ingeschakeld, laat de sprinter een extra schreeuw horen zodra hij dichtbij komt, bovenop de ontdekking- en achtervolgingsschreeuwen. Uitschakelen vermindert lawaai in gevechten en houdt het spel rustiger bij grote hordes.",
 
     Sandbox_Apocalipse_TSY_NearAsWorldSound = "Nabije schreeuw als 3D-wereldaudio",
-    Sandbox_Apocalipse_TSY_NearAsWorldSound_tooltip = "Ingeschakeld: de nabije schreeuw gebruikt PlayWorldSound, net als de verre schreeuw — 3D-geluid met richting en echo, ideaal voor koptelefoons. Uitgeschakeld: het gebruikt lokale zombie-audio, directer en droger.",
+    Sandbox_Apocalipse_TSY_NearAsWorldSound_tooltip = "Ingeschakeld: de nabije schreeuw gebruikt PlayWorldSound, net als de verre schreeuw - 3D-geluid met richting en echo, ideaal voor koptelefoons. Uitgeschakeld: het gebruikt lokale zombie-audio, directer en droger.",
 
 }

@@ -51,6 +51,6 @@ Sandbox_NO = {
     Sandbox_Apocalipse_TSY_EnableNearScream_tooltip = "Når aktivert, slipper sprinteren ut et ekstra skrik når den kommer nært nok, i tillegg til oppdagelses- og jaktskrik. Deaktivering reduserer støy i nærkamp og holder det ryddigere i store horder.",
 
     Sandbox_Apocalipse_TSY_NearAsWorldSound = "Nært skrik som 3D-verdenslyd",
-    Sandbox_Apocalipse_TSY_NearAsWorldSound_tooltip = "Når aktivert, bruker nært skrik PlayWorldSound som et 3D-lyd med retning og ekko — perfekt for hodetelefoner. Når deaktivert, brukes lokal zombielyd, som høres tørrere og mer direkte ut.",
+    Sandbox_Apocalipse_TSY_NearAsWorldSound_tooltip = "Når aktivert, bruker nært skrik PlayWorldSound som et 3D-lyd med retning og ekko - perfekt for hodetelefoner. Når deaktivert, brukes lokal zombielyd, som høres tørrere og mer direkte ut.",
 
 }

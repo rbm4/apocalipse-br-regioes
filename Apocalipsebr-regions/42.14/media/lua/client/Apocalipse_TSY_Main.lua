@@ -364,7 +364,7 @@ local function Apocalipse_TSY_OnZombieUpdate(zombie)
         return
     end
 
-    -- Skip registered module zombies (bosses) — they have their own sound system
+    -- Skip registered module zombies (bosses) - they have their own sound system
     local modData = zombie:getModData()
     if modData.Apocalipse_TSY_IsModuleZombie then
         return

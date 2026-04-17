@@ -7,7 +7,7 @@
 --
 -- Zombies are tracked by onlineID after the server confirms them with a
 -- module ID (args.m in the ConfirmZombie payload). This file does NOT scan
--- all zombies — it only operates on explicitly initialized zombies.
+-- all zombies - it only operates on explicitly initialized zombies.
 -- ============================================================================
 
 if isServer() then
@@ -47,11 +47,16 @@ local VANILLA_VOICE_SOUNDS = {
 -- ============================================================================
 
 --- Check whether a zombie's current outfit matches any of a module's outfitNames.
+--- Also accepts zombies force-flagged via modData (e.g. mid-game conversions where
+--- dressInNamedOutfit doesn't sync the outfit name).
 ---@param zombie IsoZombie
 ---@param moduleDef table
 ---@return boolean
 local function outfitMatchesModule(zombie, moduleDef)
     if not moduleDef or not moduleDef.outfitNames then return false end
+    -- Force-flagged zombies always match their assigned module
+    local modData = zombie:getModData()
+    if modData.Apocalipse_TSY_ForceModuleId == moduleDef.id then return true end
     local outfit = zombie:getOutfitName()
     if not outfit then return false end
     for _, name in ipairs(moduleDef.outfitNames) do
@@ -63,7 +68,8 @@ end
 --- Initialize tracking for a module zombie after ConfirmZombie.
 ---@param zombie IsoZombie
 ---@param moduleId string  The module ID from the server payload (args.m)
-function RegionManager.ZombieModuleClient.initZombie(zombie, moduleId)
+---@param opts table|nil   Optional convergence hints: { expectedOutfit, expectedToughness }
+function RegionManager.ZombieModuleClient.initZombie(zombie, moduleId, opts)
     if not zombie or not moduleId then return end
 
     local moduleDef = RegionManager.ZombieModules.getById(moduleId)
@@ -91,12 +97,15 @@ function RegionManager.ZombieModuleClient.initZombie(zombie, moduleId)
     end
 
     trackedZombies[id] = {
-        moduleDef       = moduleDef,
+        moduleDef        = moduleDef,
         themePlaying     = false,
         themeInstance    = nil,
         detectPlayed     = false,
         periodicState    = periodicState,
         lastRedirectTick = 0,
+        -- Convergence hints: self-heal outfit/toughness if they drift
+        expectedOutfit    = opts and opts.expectedOutfit or nil,
+        expectedToughness = opts and opts.expectedToughness or nil,
     }
 end
 
@@ -228,7 +237,89 @@ local function getDistSq(a, b)
 end
 
 -- ============================================================================
--- OnZombieUpdate — process tracked module zombies only
+-- Obstacle smashing: when a module zombie is stuck hitting a window or door,
+-- damage/destroy it so the zombie can continue pursuing the player.
+-- Only runs on the owning client (zombie:isLocal()).
+-- ============================================================================
+
+--- Damage or destroy a window the zombie is adjacent to.
+---@param zombie IsoZombie
+---@param window IsoWindow
+---@param damagePer number  Damage per smash tick
+local function smashWindow(zombie, window, damagePer)
+    if not window then return end
+    -- Destroy barricade first, then the window itself
+    local barricade = window:getBarricadeForCharacter(zombie)
+    if barricade then
+        barricade:Damage(damagePer)
+        return
+    end
+    -- If the window has glass / is not broken, smash it
+    if not window:isSmashed() then
+        window:smashWindow()
+        return
+    end
+    -- Broken and no barricade: the path should be clear now
+end
+
+--- Damage a door / barricaded door the zombie is adjacent to.
+---@param zombie IsoZombie
+---@param door IsoThumpable|IsoDoor
+---@param damagePer number  Damage per smash tick
+local function smashDoor(zombie, door, damagePer)
+    if not door then return end
+    -- If the door is openable (unlocked), just open it
+    if instanceof(door, "IsoDoor") then
+        if not door:isLocked() and not door:isBarricaded() then
+            door:ToggleDoor(zombie)
+            return
+        end
+    end
+    -- Damage through the thumpable interface
+    if door.Damage then
+        door:Damage(damagePer)
+    elseif door.damage then
+        door:damage(damagePer)
+    end
+end
+
+--- Scan the zombie's current square and adjacent squares for obstacles.
+--- Returns the first window or door found, or nil.
+---@param zombie IsoZombie
+---@return IsoWindow|nil, IsoThumpable|IsoDoor|nil
+local function findAdjacentObstacle(zombie)
+    local sq = zombie:getSquare()
+    if not sq then return nil, nil end
+
+    -- Check objects on the zombie's square and immediate neighbours
+    local squares = { sq }
+    for dir = 0, 3 do
+        local adj = sq:getAdjacentSquare(dir)
+        if adj then squares[#squares + 1] = adj end
+    end
+
+    for _, checkSq in ipairs(squares) do
+        local objects = checkSq:getObjects()
+        if objects then
+            for j = 0, objects:size() - 1 do
+                local obj = objects:get(j)
+                if obj then
+                    if instanceof(obj, "IsoWindow") then
+                        return obj, nil
+                    end
+                    if instanceof(obj, "IsoDoor") or
+                       (instanceof(obj, "IsoThumpable") and obj:isDoor()) then
+                        return nil, obj
+                    end
+                end
+            end
+        end
+    end
+    return nil, nil
+end
+
+-- ============================================================================
+-- OnZombieUpdate - process tracked module zombies only
 -- ============================================================================
 
 local function onZombieUpdate(zombie)
@@ -256,6 +347,58 @@ local function onZombieUpdate(zombie)
     local behavior = moduleDef.behavior or {}
     local sounds = moduleDef.sounds or {}
     local detectionRange = behavior.detectionRange or 80
+
+    -- ----------------------------------------------------------------
+    -- Convergence: self-heal outfit and toughness if they diverged
+    -- (e.g. makeInactive cycle reset them, late join, etc.)
+    -- ----------------------------------------------------------------
+    if data.expectedOutfit then
+        local curOutfit = zombie:getOutfitName()
+        if curOutfit ~= data.expectedOutfit then
+            if not data._outfitFixLogged then
+                print("[ZMC-Converge] z=" .. tostring(id) ..
+                      " outfit mismatch: got='" .. tostring(curOutfit) ..
+                      "' expected='" .. tostring(data.expectedOutfit) .. "', fixing")
+                data._outfitFixLogged = true
+            end
+            zombie:dressInNamedOutfit(data.expectedOutfit)
+            zombie:resetModel()
+        else
+            -- Outfit matched; allow logging again if it drifts later
+            data._outfitFixLogged = nil
+        end
+    end
+
+    if data.expectedToughness then
+        local et = data.expectedToughness
+        local md = zombie:getModData()
+        -- Skip convergence if toughness has been exhausted -- the system
+        -- disengages completely after all lives are used up.
+        if md.Apocalipse_TSY_ToughnessType ~= "exhausted" then
+            -- Use tonumber() -- modData stores values as strings, et.* are numbers.
+            if et.type and md.Apocalipse_TSY_ToughnessType ~= et.type then
+                print("[ZMC-Converge] z=" .. tostring(id) ..
+                      " toughness type mismatch: got='" .. tostring(md.Apocalipse_TSY_ToughnessType) ..
+                      "' expected='" .. tostring(et.type) .. "', fixing")
+                md.Apocalipse_TSY_ToughnessType = et.type
+            end
+            if et.maxHits and tonumber(md.Apocalipse_TSY_ToughnessMaxHits) ~= et.maxHits then
+                print("[ZMC-Converge] z=" .. tostring(id) ..
+                      " maxHits mismatch: got=" .. tostring(md.Apocalipse_TSY_ToughnessMaxHits) ..
+                      " expected=" .. tostring(et.maxHits) .. ", fixing")
+                md.Apocalipse_TSY_ToughnessMaxHits = et.maxHits
+            end
+            -- Only seed the counter if it's missing entirely (first application).
+            -- Never reset it during convergence -- that would erase hit progress.
+            if md.Apocalipse_TSY_ToughnessHitCounter == nil then
+                print("[ZMC-Converge] z=" .. tostring(id) ..
+                      " HitCounter was nil, seeding to 0 (type=" ..
+                      tostring(md.Apocalipse_TSY_ToughnessType) ..
+                  ", maxHits=" .. tostring(md.Apocalipse_TSY_ToughnessMaxHits) .. ")")
+                md.Apocalipse_TSY_ToughnessHitCounter = 0
+            end
+        end
+    end
 
     local player = getPlayer()
     if not player or player:isDead() then return end
@@ -302,11 +445,41 @@ local function onZombieUpdate(zombie)
             zombie:pathToLocationF(player:getX(), player:getY(), player:getZ())
             data.lastRedirectTick = tickCounter
         end
+
+        -- Obstacle smashing: if the zombie is stuck on a window/door, break
+        -- through it and re-redirect to the player.
+        if behavior.smashObstacles then
+            local smashCooldown = behavior.smashCooldownTicks or 60
+            if not data.lastSmashTick then data.lastSmashTick = 0 end
+            if (tickCounter - data.lastSmashTick) >= smashCooldown then
+                local target = zombie:getTarget()
+                -- If zombie is targeting something that isn't a player,
+                -- check for adjacent obstacles.
+                local isStuck = false
+                if target then
+                    isStuck = not instanceof(target, "IsoPlayer")
+                end
+                if isStuck then
+                    local dmg = behavior.smashDamage or 100
+                    local window, door = findAdjacentObstacle(zombie)
+                    if window then
+                        smashWindow(zombie, window, dmg)
+                        data.lastSmashTick = tickCounter
+                    elseif door then
+                        smashDoor(zombie, door, dmg)
+                        data.lastSmashTick = tickCounter
+                    end
+                    -- Re-redirect immediately after clearing obstacle
+                    zombie:pathToLocationF(player:getX(), player:getY(), player:getZ())
+                    data.lastRedirectTick = tickCounter
+                end
+            end
+        end
     end
 end
 
 -- ============================================================================
--- OnWeaponHitCharacter — hit sounds for tracked module zombies
+-- OnWeaponHitCharacter - hit sounds for tracked module zombies
 -- ============================================================================
 
 local function onWeaponHitCharacter(attacker, target, weapon, damage)

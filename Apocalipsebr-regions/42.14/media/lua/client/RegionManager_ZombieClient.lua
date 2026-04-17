@@ -79,7 +79,7 @@ function SpeedTracker.revalidateBatch()
                     SpeedTracker.cursor = 0
                     break
                 end
-                -- Don't increment checked — we need to re-check this slot
+                -- Don't increment checked - we need to re-check this slot
                 -- But do avoid infinite loop if all entries are dead
                 if SpeedTracker.cursor > SpeedTracker.count then
                     SpeedTracker.cursor = 0
@@ -105,7 +105,7 @@ local PendingZombies = {
 }
 
 --- OnZombieCreate handler: queue newly spawned remote zombies for processing.
---- Do NOT read getOnlineID() here — it is not set yet at event time.
+--- Do NOT read getOnlineID() here - it is not set yet at event time.
 ---@param zombie IsoZombie
 local function onZombieCreate(zombie)
     if not zombie then return end
@@ -268,35 +268,6 @@ local function Apocalipse_TSY_OnServerCommand(module, command, args)
                     print("  -> Converted to Shambler")
                 end
 
-                -- Module zombie: initialize client-side sound/behavior tracking
-                -- Only if the zombie's outfit actually matches the module definition
-                if args.m then
-                    local moduleDef = RegionManager.ZombieModules.getById(args.m)
-                    local outfitName = zombie:getOutfitName()
-                    local outfitValid = false
-                    if moduleDef and moduleDef.outfitNames and outfitName then
-                        for _, name in ipairs(moduleDef.outfitNames) do
-                            if outfitName == name then
-                                outfitValid = true
-                                break
-                            end
-                        end
-                    end
-                    if outfitValid then
-                        modData.Apocalipse_TSY_IsModuleZombie = true
-                        RegionManager.ZombieModuleClient.initZombie(zombie, args.m)
-                        -- Apply bossHealth override if the module defines it
-                        if moduleDef and moduleDef.stats and moduleDef.stats.bossHealth then
-                            if zombie:getHealth() < moduleDef.stats.bossHealth then
-                                zombie:setHealth(moduleDef.stats.bossHealth)
-                            end
-                        end
-                    else
-                        print("Apocalipse_TSY: Zombie outfit '" .. tostring(outfitName) ..
-                              "' does not match module '" .. tostring(args.m) .. "', skipping module init")
-                    end
-                end
-
                 break
             end
         end
@@ -320,7 +291,7 @@ local function Apocalipse_TSY_ProcessPending()
         return
     end
 
-    -- Zone data not ready yet — request it and bail
+    -- Zone data not ready yet - request it and bail
     if not (RegionManager and RegionManager.Client and RegionManager.Client.zoneData) then
         sendClientCommand("RegionManager", "RequestAllBoundaries", {})
         return
@@ -367,7 +338,7 @@ local function Apocalipse_TSY_ProcessPending()
                     PendingZombies.count = PendingZombies.count - 1
                 end
             end
-            -- else: onlineID < 0 means server hasn't assigned it yet — keep in queue
+            -- else: onlineID < 0 means server hasn't assigned it yet - keep in queue
         end
     end
 
@@ -381,8 +352,8 @@ end
 
 -- ============================================================================
 -- Register two independent tick modules with the central dispatcher:
---   1. SpawnProcessor  — drains the pending queue (new zombie arrivals)
---   2. SpeedRevalidation — round-robin checks for ownership-transfer drift
+--   1. SpawnProcessor  - drains the pending queue (new zombie arrivals)
+--   2. SpeedRevalidation - round-robin checks for ownership-transfer drift
 -- ============================================================================
 
 ---@type TickModuleDef
@@ -428,9 +399,11 @@ local function onZombieDead(zombie)
     local killBonus = modData.Apocalipse_TSY_KillBonus or 0
     -- Base kill = 1, plus difficulty bonus (already clamped to >= 0)
     local totalKillValue = 1 + killBonus
-    ZKC_Main.recordKill(player, totalKillValue)
-    if killBonus > 0 then
-        print("Apocalipse_TSY: Player earned +" .. killBonus .. " extra kill points (total " .. totalKillValue .. ")")
+    if ZKC_Main and ZKC_Main.recordKill then
+        ZKC_Main.recordKill(player, totalKillValue)
+        if killBonus > 0 then
+            print("Apocalipse_TSY: Player earned +" .. killBonus .. " extra kill points (total " .. totalKillValue .. ")")
+        end
     end
 end
 Events.OnZombieDead.Add(onZombieDead)

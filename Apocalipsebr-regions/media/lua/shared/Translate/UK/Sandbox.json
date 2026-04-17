@@ -17,7 +17,7 @@
     "Sandbox_Apocalipse_TSY_FarRange": "Discovery Scream Range (Tiles)",
     "Sandbox_Apocalipse_TSY_FarRange_tooltip": "Maximum distance, in tiles, at which the discovery scream can be heard in 3D. Higher values make the sound travel further, allowing you to hear sprinters before you see them. Ideal for open maps.",
     "Sandbox_Apocalipse_TSY_AlertNearbyZombies": "Scream Attracts Nearby Zombies",
-    "Sandbox_Apocalipse_TSY_AlertNearbyZombies_tooltip": "If enabled, the scream uses the game’s sound system to draw zombies within a set radius. When disabled, it’s purely aesthetic — it scares the player but doesn’t affect zombie AI. Perfect for immersion without added difficulty.",
+    "Sandbox_Apocalipse_TSY_AlertNearbyZombies_tooltip": "If enabled, the scream uses the game’s sound system to draw zombies within a set radius. When disabled, it’s purely aesthetic - it scares the player but doesn’t affect zombie AI. Perfect for immersion without added difficulty.",
     "Sandbox_Apocalipse_TSY_AlertRadius": "Horde Attraction Radius (Tiles)",
     "Sandbox_Apocalipse_TSY_AlertRadius_tooltip": "The size of the area, in tiles, where zombies will hear the scream and walk toward the source. Example: 20 = just the surrounding street; 80–100 = most of the neighbourhood. Too high a value turns every scream into a mini-horde event.",
     "Sandbox_Apocalipse_TSY_ClusterRadius": "Scream Cluster Radius (Tiles)",
@@ -33,5 +33,5 @@
     "Sandbox_Apocalipse_TSY_EnableNearScream": "Enable Close-Range Scream",
     "Sandbox_Apocalipse_TSY_EnableNearScream_tooltip": "If enabled, the sprinter will emit an extra scream when entering close range, on top of the discovery and chase screams. Disabling reduces noise in melee combat and keeps the soundscape cleaner during massive fights.",
     "Sandbox_Apocalipse_TSY_NearAsWorldSound": "Close-Range Scream as 3D World Sound",
-    "Sandbox_Apocalipse_TSY_NearAsWorldSound_tooltip": "When enabled, the close scream uses PlayWorldSound, just like distant screams — 3D audio with direction and echo, perfect for headsets. When disabled, it uses local zombie audio, which is drier and more direct."
+    "Sandbox_Apocalipse_TSY_NearAsWorldSound_tooltip": "When enabled, the close scream uses PlayWorldSound, just like distant screams - 3D audio with direction and echo, perfect for headsets. When disabled, it uses local zombie audio, which is drier and more direct."
 }

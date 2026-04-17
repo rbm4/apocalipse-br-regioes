@@ -352,15 +352,15 @@ When creating a new B42 mod from scratch:
 ## Constraints
 
 - DO NOT use deprecated B41 syntax (`Type = Clothing`, `DisplayName = ...`)
-- DO NOT put `mod.info` directly in the mod root — it goes in `common/` or a versioning folder
-- DO NOT forget the `common/` folder — the mod will not be detected without it
-- DO NOT use float values for `versionMin` — use string format like `42.13.0`
+- DO NOT put `mod.info` directly in the mod root - it goes in `common/` or a versioning folder
+- DO NOT forget the `common/` folder - the mod will not be detected without it
+- DO NOT use float values for `versionMin` - use string format like `42.13.0`
 - DO NOT mix Build 41 and Build 42 file locations unless intentionally supporting both
 - ALWAYS use `ItemType = base:<type>` for B42 script definitions
 - ALWAYS create translation files for display names instead of inline `DisplayName`
 - ALWAYS use backslashes in clothing XML paths (e.g. `media\models_X\Model.FBX`)
 - ALWAYS use forward slashes or no slashes in Lua require paths
-- File and folder names are case-sensitive on Linux/macOS — match casing exactly
+- File and folder names are case-sensitive on Linux/macOS - match casing exactly
 
 ## Approach
 

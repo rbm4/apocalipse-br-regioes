@@ -1,0 +1,78 @@
+[h1]ApocalipseBR - Regiões[/h1]
+
+Region management for Project Zomboid Build 42 multiplayer servers. Create zones with custom PVP rules, zombie overrides, boss zombies, and sprinter screams.
+
+[hr][/hr]
+
+[h2]Features[/h2]
+
+[h3]Zone System[/h3]
+[list]
+[*] Create zones anywhere on the map with custom rules
+[*] Zone types: PVP, Sprinters, Shamblers, Safe Zone, Loot Bonus, Dead Zone, Custom
+[*] Auto-generated safe zones fill the entire map - no gaps
+[*] Overlapping zones merge smartly
+[*] Edit zones via JSON config file - no code needed
+[*] Admin panel for viewing and teleporting to regions
+[/list]
+
+[h3]PVP Zones[/h3]
+[list]
+[*] PVP auto-enables when entering PVP zones, auto-disables when leaving
+[*] Anti-exploit: rapid safety toggling triggers a lockout
+[/list]
+
+[h3]Per-Zone Zombie Overrides[/h3]
+Set percentage chances (0-100%) per zone for:
+[list]
+[*] Speed (Sprinter / Shambler), Vision, Hearing, Toughness, Strength, Memory, Cognition
+[*] Zombie armor and tough zombie extra hits (1-99)
+[/list]
+
+[h3]Boss Zombies[/h3]
+[list]
+[*] Register boss zombie types by outfit - guaranteed stats, custom health, theme music, sound effects
+[*] Other mods can register their own boss modules via the API
+[/list]
+
+[h3]Sprinter Screams[/h3]
+Based on SIMBAproduz's "theySEE YOU", enhanced and integrated:
+[list]
+[*] Sprinters scream on discovery, close-up, and during chases
+[*] 62 unique voice files - no repetition
+[*] Screams attract nearby zombies (horde pull)
+[*] Anti-spam: cluster cooldown prevents scream stacking
+[*] Configurable via sandbox options (chances, volumes, ranges, cooldowns)
+[/list]
+
+[h3]Sprinter Animations[/h3]
+[list]
+[*] Custom lunge and movement animations for sprinters
+[*] 5 sprint variants with multiplayer sync
+[/list]
+
+[hr][/hr]
+
+[h2]Sandbox Options[/h2]
+All configurable under the [b]Apocalipse_TSY[/b] sandbox page:
+[list]
+[*] Scream timing (day only / night only / always)
+[*] Scream chances, volumes, and ranges
+[*] Horde alert toggle and radius
+[*] Cluster anti-spam settings
+[*] Debug mode
+[/list]
+
+[hr][/hr]
+
+[h2]Requirements[/h2]
+[list]
+[*] Project Zomboid Build 42 (≥ 42.14.0)
+[*] Designed for multiplayer (also works in singleplayer)
+[/list]
+
+[h2]Credits[/h2]
+[list]
+[*] [b]Author:[/b] Hypothetic
+[*] Sprinter scream system originally by SIMBAproduz / "theySEE YOU"
+[/list]

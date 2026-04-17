@@ -620,7 +620,7 @@ local MEMORY_RANDOM = 5
 -- FIX: All config options are set BEFORE the makeInactive cycle so that the
 -- internal DoZombieStats() (called by makeInactive(false)) applies everything
 -- in a single pass. The old approach set speed first, restored it, then set
--- other configs and called DoZombieStats() — which re-triggered doZombieSpeed()
+-- other configs and called DoZombieStats() - which re-triggered doZombieSpeed()
 -- against the already-restored sandbox default, undoing the speed override ~66%
 -- of the time due to Rand.Next(3) in doZombieSpeedInternal.
 --
@@ -705,7 +705,7 @@ function RegionManager.Shared.ServerSideProperties(zombie, data, sandboxOptions)
     end
 
     -- ========================================================================
-    -- SINGLE makeInactive CYCLE — applies ALL config options at once via
+    -- SINGLE makeInactive CYCLE - applies ALL config options at once via
     -- the internal DoZombieStats() call inside makeInactive(false).
     -- For sprinters: retry until doSprinter() path is taken (lunger=true).
     -- Shamblers always hit doShambler() on the first try (no Rand.Next(3)).
@@ -721,11 +721,9 @@ function RegionManager.Shared.ServerSideProperties(zombie, data, sandboxOptions)
                 break
             end
         end
-        modData.Apocalipse_TSY_ExpectedSpeed = "sprinter"
     elseif data.isShambler then
         zombie:makeInactive(true)
         zombie:makeInactive(false)
-        modData.Apocalipse_TSY_ExpectedSpeed = "shambler"
     else
         -- No speed override, but still apply other stats via the cycle
         zombie:makeInactive(true)
@@ -733,9 +731,9 @@ function RegionManager.Shared.ServerSideProperties(zombie, data, sandboxOptions)
     end
 
     -- ========================================================================
-    -- RESTORE ALL CONFIG OPTIONS — done AFTER the cycle so DoZombieStats
+    -- RESTORE ALL CONFIG OPTIONS - done AFTER the cycle so DoZombieStats
     -- read our overrides, not the sandbox defaults.
-    -- NO trailing DoZombieStats() call — everything was applied above.
+    -- NO trailing DoZombieStats() call - everything was applied above.
     -- ========================================================================
     speedConfigOption:setValue(origSpeed)
     cognitionConfigOption:setValue(origCognition)
@@ -745,8 +743,19 @@ function RegionManager.Shared.ServerSideProperties(zombie, data, sandboxOptions)
     strengthConfigOption:setValue(origStrength)
     memoryConfigOption:setValue(origMemory)
 
+    -- Re-fetch modData after the makeInactive cycle in case the cycle
+    -- invalidated the earlier Lua reference to the Java HashMap.
+    modData = zombie:getModData()
+
+    -- Write ExpectedSpeed on the fresh reference
+    if data.isSprinter then
+        modData.Apocalipse_TSY_ExpectedSpeed = "sprinter"
+    elseif data.isShambler then
+        modData.Apocalipse_TSY_ExpectedSpeed = "shambler"
+    end
+
     -- ========================================================================
-    -- TOUGHNESS (HP-based) — applied after cycle since DoZombieStats
+    -- TOUGHNESS (HP-based) - applied after cycle since DoZombieStats
     -- does not touch health.
     -- Always set toughness modData so the hit system recognizes this zombie.
     -- Only modify health when the zombie is not mid-combat. 
@@ -775,7 +784,7 @@ function RegionManager.Shared.ServerSideProperties(zombie, data, sandboxOptions)
     end
 
     -- ========================================================================
-    -- KILL BONUS — module override or difficulty-based computation
+    -- KILL BONUS - module override or difficulty-based computation
     -- ========================================================================
     local killBonus = 0
 
@@ -976,9 +985,11 @@ function RegionManager.Shared.ApplyToughZombieHit(zombieID, hitCounter, maxHits,
                 zombie:setStaggerBack(true)
                 print("Apocalipse_TSY: Tough zombie " .. zombieID .. " resisted hit (" .. hitCounter .. "/" .. maxHits .. ")")
             else
-                -- All lives used up: zombie can now be killed normally
+                -- All lives used up: fully disengage the toughness system.
+                -- Clear the type so OnWeaponHitCharacter stops intercepting hits
+                -- and the convergence loop stops re-enforcing toughness.
+                modData.Apocalipse_TSY_ToughnessType = "exhausted"
                 zombie:setAvoidDamage(false)
-                zombie:setStaggerBack(true)
                 print("Apocalipse_TSY: Tough zombie " .. zombieID .. " exhausted all lives, now vulnerable")
             end
             break
@@ -1003,16 +1014,19 @@ local function OnWeaponHitCharacter(attacker, target, weapon, damage)
     local toughnessType = modData.Apocalipse_TSY_ToughnessType
     if toughnessType == "tough" then
         local zombieID = target:getOnlineID()
-        local hitCounter = modData.Apocalipse_TSY_ToughnessHitCounter or 0
-        local maxHits = modData.Apocalipse_TSY_ToughnessMaxHits or RegionManager.Shared.DEFAULT_MAX_HITS
+        local hitCounter = tonumber(modData.Apocalipse_TSY_ToughnessHitCounter) or 0
+        local maxHits = tonumber(modData.Apocalipse_TSY_ToughnessMaxHits) or RegionManager.Shared.DEFAULT_MAX_HITS
+
+        -- Already exhausted: let normal PZ combat handle everything
+        if hitCounter >= maxHits then
+            return
+        end
 
         -- Optimistic local application: immediately protect the zombie on this client
         -- The server will send the authoritative state back shortly
-        if hitCounter < maxHits then
-            target:setAvoidDamage(true)
-            target:setKnockedDown(false)
-            target:setStaggerBack(true)
-        end
+        target:setAvoidDamage(true)
+        target:setKnockedDown(false)
+        target:setStaggerBack(true)
 
         -- Send to server for authoritative processing
         sendClientCommand(player, "Apocalipse_TSY", "ZombieHitTough", {

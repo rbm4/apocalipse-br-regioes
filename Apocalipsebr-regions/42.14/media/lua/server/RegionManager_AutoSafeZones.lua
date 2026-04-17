@@ -276,7 +276,7 @@ function RegionManager.AutoSafeZones.generateSafeZones(configuredRegions)
     --         local newSafeZones = {}
     --         for _, safeZone in ipairs(safeZones) do
     --             if rectanglesOverlap(safeZone, pvpZone) then
-    --                 -- This safe zone overlaps a PVP zone — split it
+    --                 -- This safe zone overlaps a PVP zone - split it
     --                 hadOverlap = true
     --                 log("Validation pass " .. pass .. ": fixing overlap between safe zone and PVP " .. (pvpZone.id or "?"))
     --                 local fragments = subtractRectangle(safeZone, pvpZone)

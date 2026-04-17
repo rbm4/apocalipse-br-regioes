@@ -51,6 +51,6 @@ Sandbox_TR = {
     Sandbox_Apocalipse_TSY_EnableNearScream_tooltip = "Etkinleştirildiğinde sprinter, yakın menzile girdiğinde ek bir çığlık atar. Devre dışı bırakmak yakın dövüşte gürültüyü azaltır ve büyük sürülerde daha temiz bir ses deneyimi sağlar.",
 
     Sandbox_Apocalipse_TSY_NearAsWorldSound = "Yakın çığlığı 3D dünya sesi olarak oynat",
-    Sandbox_Apocalipse_TSY_NearAsWorldSound_tooltip = "Etkinleştirildiğinde yakın çığlık, yönlü ve yankılı 3D sesle (PlayWorldSound) oynatılır — kulaklıklar için idealdir. Devre dışı bırakıldığında, yerel zombi sesi olarak daha kuru ve doğrudan bir ses çıkar.",
+    Sandbox_Apocalipse_TSY_NearAsWorldSound_tooltip = "Etkinleştirildiğinde yakın çığlık, yönlü ve yankılı 3D sesle (PlayWorldSound) oynatılır - kulaklıklar için idealdir. Devre dışı bırakıldığında, yerel zombi sesi olarak daha kuru ve doğrudan bir ses çıkar.",
 
 }

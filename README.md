@@ -32,7 +32,6 @@ Custom region management for Project Zomboid multiplayer servers. Divides the ga
     - [6.4 Client-Side Property Application](#64-client-side-property-application)
     - [6.5 Speed Revalidation (Ownership Transfer Fix)](#65-speed-revalidation-ownership-transfer-fix)
     - [6.6 Tough Zombie Hit System](#66-tough-zombie-hit-system)
-    - [6.7 Kill Bonus Computation](#67-kill-bonus-computation)
   - [7. Zombie Module System (Boss Zombies)](#7-zombie-module-system-boss-zombies)
     - [7.1 Module Registration API](#71-module-registration-api)
     - [7.2 Client-Side Module Engine](#72-client-side-module-engine)
@@ -127,7 +126,7 @@ Each region references one or more **category keys**. Categories provide default
 
 **Merge order (in `getMergedProperties()`):**
 1. Iterate each category in order and apply its defaults (first writer wins for duplicate keys)
-2. Apply `customProperties` on top (always wins — highest priority)
+2. Apply `customProperties` on top (always wins - highest priority)
 
 The resulting flat `ZoneProperties` table is stored in `RegisteredZoneData.properties`.
 
@@ -141,7 +140,7 @@ The `RegionManager_AutoSafeZones` module ensures **the entire playable map** is 
 4. **Merge** adjacent fragments back together (only if the merged result doesn't overlap any PVP zone)
 5. Output auto-generated `AUTOSAFE` regions that are combined with the config-defined regions
 
-This guarantees that players are **always inside either a PVP zone or a safe zone** — there are no "neutral" gaps.
+This guarantees that players are **always inside either a PVP zone or a safe zone** - there are no "neutral" gaps.
 
 ### 2.4 External JSON Region File
 
@@ -163,15 +162,15 @@ Format:
 **File:** `RegionManager_Server.lua`  
 **Event:** `Events.OnLoadMapZones`
 
-1. **Cleanup** — Remove all previous `SafeZone_*` NonPvpZones and clear the Lua-side `registeredZones` table
-2. **Load** — Read regions from the external JSON file (or create it from defaults)
-3. **Auto-Safe** — Call `AutoSafeZones.mergeWithConfigured()` to add generated safe zones
-4. **Register** — For each enabled region:
+1. **Cleanup** - Remove all previous `SafeZone_*` NonPvpZones and clear the Lua-side `registeredZones` table
+2. **Load** - Read regions from the external JSON file (or create it from defaults)
+3. **Auto-Safe** - Call `AutoSafeZones.mergeWithConfigured()` to add generated safe zones
+4. **Register** - For each enabled region:
    - Compute merged properties
    - Normalize coordinates to `min/max` bounds
    - Call `world:registerZone(id, "Custom", centerX, centerY, z, width, height)`
    - Store in `RegionManager.Server.registeredZones[id]` with the region definition, merged properties, bounds, and engine zone handle
-5. **Persist** — Save to ModData under key `RegionManager_RegisteredZones`
+5. **Persist** - Save to ModData under key `RegionManager_RegisteredZones`
 
 **Client commands handled:**
 | Command | Purpose |
@@ -191,9 +190,9 @@ A central tick loop (every 6 ticks ≈ 100ms at 60 FPS) that:
 1. **Checks player position** against all known zone boundaries (received from server via `AllZoneBoundaries`)
 2. **Detects zone transitions** by comparing current zones to previous zones
 3. **Fires callbacks** on registered modules:
-   - `onZoneEntered(player, zoneId, zoneData)` — player just entered a zone
-   - `onZoneExited(player, zoneId, zoneData)` — player just left a zone
-   - `onTick(player, currentZones)` — called every tick interval
+   - `onZoneEntered(player, zoneId, zoneData)` - player just entered a zone
+   - `onZoneExited(player, zoneId, zoneData)` - player just left a zone
+   - `onTick(player, currentZones)` - called every tick interval
 
 **Module registration API:**
 ```lua
@@ -206,9 +205,9 @@ RegionManager.ClientTick.registerModule({
 ```
 
 Currently registered tick modules:
-- **PVP** — Safety state enforcement (see §5)
-- **Apocalipse_TSY_SpawnProcessor** — Drains the pending zombie queue (see §6.1)
-- **Apocalipse_TSY_SpeedRevalidation** — Round-robin speed drift correction (see §6.5)
+- **PVP** - Safety state enforcement (see §5)
+- **Apocalipse_TSY_SpawnProcessor** - Drains the pending zombie queue (see §6.1)
+- **Apocalipse_TSY_SpeedRevalidation** - Round-robin speed drift correction (see §6.5)
 
 On player spawn (`OnCreatePlayer`), zone state is cleared and boundaries are re-requested from the server.
 
@@ -230,7 +229,7 @@ PVP is controlled through PZ's built-in **Safety** system. The flow:
 
 When entering a safe zone (auto-generated or configured), safety is left enabled (since version 42.13.2+ the engine handles safe zones correctly).
 
-The `onTick` handler continuously enforces the required state — if a player manually toggles safety back, it is immediately reverted.
+The `onTick` handler continuously enforces the required state - if a player manually toggles safety back, it is immediately reverted.
 
 ### 5.2 Abuse Detection
 
@@ -253,7 +252,7 @@ This is the core of the mod. It overrides sandbox zombie settings **per-zombie**
 
 **Problem:** `Events.OnZombieCreate` fires on the client **before** the server assigns an `onlineID` to the zombie.
 
-**Solution — Deferred Processing:**
+**Solution - Deferred Processing:**
 
 ```
 Client                                 Server
@@ -290,10 +289,10 @@ Client                                 Server
 ```
 
 **Key design decisions:**
-- **PendingZombies queue** — Only newly-spawned zombies are queued, not the entire cell list. Typical queue size is 0-20.
-- **Batch requests** — All pending zombies processed in one tick are sent as a single `RequestZombieInfo` command with an array of proposals.
-- **PersistentID** — Built from `getPersistentOutfitID()` + `isFemale()`. Stable across respawns and ownership transfers.
-- **Position mismatch guard** — Server discards cached decisions if the zombie's position differs by >300 tiles (recycled zombie detection).
+- **PendingZombies queue** - Only newly-spawned zombies are queued, not the entire cell list. Typical queue size is 0-20.
+- **Batch requests** - All pending zombies processed in one tick are sent as a single `RequestZombieInfo` command with an array of proposals.
+- **PersistentID** - Built from `getPersistentOutfitID()` + `isFemale()`. Stable across respawns and ownership transfers.
+- **Position mismatch guard** - Server discards cached decisions if the zombie's position differs by >300 tiles (recycled zombie detection).
 
 ### 6.2 Server-Side Decision Pipeline
 
@@ -315,9 +314,9 @@ RollDecisions(chances, x, y)  ← Single deterministic random [0,100)
 decisions table               ← 28 booleans + position + maxHits + armor values
 ```
 
-**Overlapping zones use MAX aggregation** — if zone A has `sprinterChance=30` and zone B has `sprinterChance=80`, the effective chance is 80%.
+**Overlapping zones use MAX aggregation** - if zone A has `sprinterChance=30` and zone B has `sprinterChance=80`, the effective chance is 80%.
 
-**Deterministic RNG** — Uses a Linear Congruential Generator (LCG) with `seed * 1103515245 + 12345 mod 2^31`. The seed is set per-zombie from time-based values.
+**Deterministic RNG** - Uses a Linear Congruential Generator (LCG) with `seed * 1103515245 + 12345 mod 2^31`. The seed is set per-zombie from time-based values.
 
 **Configurable per-region zombie properties (all as 0-100 percentage chances):**
 
@@ -394,17 +393,17 @@ Format: "BBBBBBBBBSXXXXXSYYYYYMM"
 
 Uses the **BLTRandomZombies reflection pattern**: temporarily overrides sandbox `ConfigOption` values, runs `makeInactive(true)/makeInactive(false)` cycle (which triggers Java `DoZombieStats()`), then restores originals.
 
-**Critical fix implemented:** All config options are set **before** the makeInactive cycle so `DoZombieStats()` reads them in a single pass. The old approach would set speed, restore, then set other configs — causing `doZombieSpeed()` to re-randomize against defaults ~66% of the time.
+**Critical fix implemented:** All config options are set **before** the makeInactive cycle so `DoZombieStats()` reads them in a single pass. The old approach would set speed, restore, then set other configs - causing `doZombieSpeed()` to re-randomize against defaults ~66% of the time.
 
 **Sprinter retry loop:** Since PZ internally calls `Rand.Next(3)` in `doZombieSpeedInternal`, only `doSprinter()` sets `zombie.lunger = true` (the other paths run `doFakeShambler`). The code retries up to 15 times until `lunger` is true. Expected ~3 attempts for 99.5% reliability.
 
 **Config options manipulated:**
-- `ZombieLore.Speed` — Sprinter(1) / FastShambler(2) / Shambler(3)
-- `ZombieLore.Cognition` — NavigateDoors(1) / Navigate(2) / Basic(3)
-- `ZombieLore.Sight` — Eagle(1) / Normal(2) / Poor(3)
-- `ZombieLore.Hearing` — Pinpoint(1) / Normal(2) / Poor(3)
-- `ZombieLore.Strength` — Superhuman(1) / Normal(2) / Weak(3)
-- `ZombieLore.Memory` — Long(1) / Normal(2) / Short(3) / None(4) / Random(5)
+- `ZombieLore.Speed` - Sprinter(1) / FastShambler(2) / Shambler(3)
+- `ZombieLore.Cognition` - NavigateDoors(1) / Navigate(2) / Basic(3)
+- `ZombieLore.Sight` - Eagle(1) / Normal(2) / Poor(3)
+- `ZombieLore.Hearing` - Pinpoint(1) / Normal(2) / Poor(3)
+- `ZombieLore.Strength` - Superhuman(1) / Normal(2) / Weak(3)
+- `ZombieLore.Memory` - Long(1) / Normal(2) / Short(3) / None(4) / Random(5)
 
 **Toughness** is applied after the cycle as direct HP manipulation:
 - Tough: `health = random_base + maxHits` (e.g. 2+ HP)
@@ -413,7 +412,7 @@ Uses the **BLTRandomZombies reflection pattern**: temporarily overrides sandbox 
 
 ### 6.5 Speed Revalidation (Ownership Transfer Fix)
 
-**Problem:** In multiplayer, when a zombie's authority owner changes (player moves away, another player gets closer), PZ calls `makeInactive(false)` which resets `speedType` to -1 and re-randomizes from sandbox defaults — losing the sprinter/shambler override.
+**Problem:** In multiplayer, when a zombie's authority owner changes (player moves away, another player gets closer), PZ calls `makeInactive(false)` which resets `speedType` to -1 and re-randomizes from sandbox defaults - losing the sprinter/shambler override.
 
 **Solution:** A `SpeedTracker` flat array tracks all zombies with speed overrides. A round-robin revalidation checks `BATCH_SIZE=8` zombies per tick interval:
 
@@ -449,31 +448,6 @@ Client (attacker)                Server                    All Clients
 ```
 
 Default `maxHits = 2` (configurable per-region or per-module, range 1-99).
-
-### 6.7 Kill Bonus Computation
-
-When a zombie dies, `ZKC_Main.recordKill(player, totalKillValue)` is called. The kill value is `1 + killBonus` where `killBonus` is computed from the zombie's properties:
-
-| Property | Bonus |
-|---|---|
-| Sprinter | +5 |
-| Shambler | -5 |
-| Hawk Vision | +1 |
-| Poor/Bad Vision | -1 |
-| Pinpoint/Good Hearing | +1 |
-| Poor/Bad Hearing | -1 |
-| Tough | +3 |
-| Fragile | -1 |
-| Superhuman | +1 |
-| Weak | -1 |
-| Navigation | +2 |
-| Long Memory | +1 |
-| Short Memory | -1 |
-| No Memory | -2 |
-| Resistant | +1 |
-| maxHits | +floor(maxHits × 0.5) |
-
-Module zombies can override this with a flat `killBonus` value.
 
 ---
 
@@ -523,15 +497,15 @@ RegionManager.ZombieModules.register({
 
 After `ConfirmZombie` with a module ID (`args.m`), the client initializes tracking for that zombie:
 
-- **Theme music** — Distance-based start/stop with gradual fade-out (180 ticks ≈ 3 seconds)
-- **Detection sound** — One-shot announcement when player first approaches
-- **Periodic sounds** — Cooldown-gated random sound picks (e.g. roars)
-- **Hit sounds** — Chance-based sound on `OnWeaponHitCharacter`
-- **Vanilla suppression** — Stops `ZombieVoiceSprinting`, `ZombieVoice`, `MaleZombieVoice`, `FemaleZombieVoice` every tick
-- **AI redirect** — If `redirectToPlayer` is set and the zombie is locally owned, periodically calls `zombie:pathToLocationF()` toward the player
-- **Boss health** — Sets `zombie:setHealth(bossHealth)` if module defines it
+- **Theme music** - Distance-based start/stop with gradual fade-out (180 ticks ≈ 3 seconds)
+- **Detection sound** - One-shot announcement when player first approaches
+- **Periodic sounds** - Cooldown-gated random sound picks (e.g. roars)
+- **Hit sounds** - Chance-based sound on `OnWeaponHitCharacter`
+- **Vanilla suppression** - Stops `ZombieVoiceSprinting`, `ZombieVoice`, `MaleZombieVoice`, `FemaleZombieVoice` every tick
+- **AI redirect** - If `redirectToPlayer` is set and the zombie is locally owned, periodically calls `zombie:pathToLocationF()` toward the player
+- **Boss health** - Sets `zombie:setHealth(bossHealth)` if module defines it
 
-Theme fade-outs are decoupled from zombie lifecycle — they finish even after the zombie dies.
+Theme fade-outs are decoupled from zombie lifecycle - they finish even after the zombie dies.
 
 ---
 
@@ -554,10 +528,10 @@ Each zombie gets a max of `MaxScreamsPerZombie = 3` total screams (discovery + c
 **Scream processing flow (`OnZombieUpdate`):**
 1. Skip if: dead, fake-dead, on floor, in vehicle, not sprinter, not targeting player, outside `MaxProcessDistance`
 2. Check `TickRate`-based throttle (default every 6 ticks)
-3. Check `CanSee(player)` — zombie must have line of sight
-4. Phase 1 — Discovery: if `HasFarScreamed == nil` and `dist > NearRange`, roll `ScreechChance` (default 60%)
-5. Phase 2 — Close-up: if `HasNearScreamed == nil` and `dist ≤ NearRange`, play with delay (`NearDelayTicks = 10`)
-6. Phase 3 — Chase: after both discovery and close-up, roll `ChaseScreechChance` (default 50%) with `ChaseCooldownHours`
+3. Check `CanSee(player)` - zombie must have line of sight
+4. Phase 1 - Discovery: if `HasFarScreamed == nil` and `dist > NearRange`, roll `ScreechChance` (default 60%)
+5. Phase 2 - Close-up: if `HasNearScreamed == nil` and `dist ≤ NearRange`, play with delay (`NearDelayTicks = 10`)
+6. Phase 3 - Chase: after both discovery and close-up, roll `ChaseScreechChance` (default 50%) with `ChaseCooldownHours`
 
 **Sprinter detection** checks `zombie:getVariableString("zombiewalktype")` for the substring "sprint" (case-insensitive).
 
@@ -579,8 +553,8 @@ On the server side, `PullHorde()` fires 5 delayed `addSound()` pulses (at tick 0
 
 ### 8.4 Sound Architecture
 
-- **62 voice slots** — `ABMIS_01.mp3` through `ABMIS_62.mp3`
-- **Bag-based shuffle** — Fisher-Yates shuffle ensures all voices play before repeating, with anti-repeat for consecutive picks
+- **62 voice slots** - `ABMIS_01.mp3` through `ABMIS_62.mp3`
+- **Bag-based shuffle** - Fisher-Yates shuffle ensures all voices play before repeating, with anti-repeat for consecutive picks
 - **Volume system:**
   - `GlobalVolume × FarVolume × PeriodMultiplier × DistanceFalloff` for discovery screams
   - `GlobalVolume × NearVolume × PeriodMultiplier` for close-up screams
