@@ -92,6 +92,21 @@ function ZombieHelper.GetPersistentID(zombie)
     return string.format("%d_%d", outfit, female)
 end
 
+--- Get a reliable persistent ID that survives outfit changes.
+--- Module zombies have their PID stamped into modData at conversion time.
+--- Normal zombies fall through to the computed PID (no behavior change).
+---@param zombie IsoZombie
+---@return string|nil
+function ZombieHelper.GetReliablePID(zombie)
+    if not zombie then return nil end
+    local modData = zombie:getModData()
+    local assigned = modData.Apocalipse_TSY_AssignedPID
+    if assigned then
+        return assigned
+    end
+    return ZombieHelper.GetPersistentID(zombie)
+end
+
 -- ============================================================================
 -- Region lookup
 -- ============================================================================
@@ -381,15 +396,14 @@ end
 -- Module-aware decision resolution
 -- ============================================================================
 
---- Check if an outfit name matches a registered zombie module.
---- If matched, build guaranteed decisions from the module's stats (no RNG).
----@param outfitName string|nil  The zombie's outfit name
+--- Look up a registered zombie module by its ID and build guaranteed decisions.
+---@param moduleId string|nil    The module's registered ID (e.g. "nemesis")
 ---@param x number               World X coordinate
 ---@param y number               World Y coordinate
 ---@return table|nil decisions   Module decisions, or nil if no module matched
-function ZombieHelper.ResolveModuleOverrides(outfitName, x, y)
-    if not outfitName then return nil end
-    local moduleDef = RegionManager.ZombieModules.getByOutfit(outfitName)
+function ZombieHelper.ResolveModuleOverrides(moduleId, x, y)
+    if not moduleId then return nil end
+    local moduleDef = RegionManager.ZombieModules.getById(moduleId)
     if not moduleDef then return nil end
     return RegionManager.ZombieModules.buildDecisions(moduleDef, x, y)
 end

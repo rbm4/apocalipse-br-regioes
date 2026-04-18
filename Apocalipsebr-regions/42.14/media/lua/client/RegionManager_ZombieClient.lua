@@ -207,6 +207,7 @@ local function Apocalipse_TSY_OnServerCommand(module, command, args)
     -- ========================================================================
     if command == "ToughZombieHit" then
         local zombieID = args.zombieID
+        local persistentID = args.persistentID
         local hitCounter = args.hitCounter
         local maxHits = args.maxHits
         local isExhausted = args.isExhausted
@@ -225,7 +226,7 @@ local function Apocalipse_TSY_OnServerCommand(module, command, args)
         if distance > 200 then
             return
         end
-        RegionManager.Shared.ApplyToughZombieHit(zombieID, hitCounter, maxHits, isExhausted)
+        RegionManager.Shared.ApplyToughZombieHit(zombieID, persistentID, hitCounter, maxHits, isExhausted)
         return
     end
 
@@ -276,6 +277,25 @@ local function Apocalipse_TSY_OnServerCommand(module, command, args)
         local modData = zombie:getModData()
         modData.Apocalipse_TSY_CachedPayload = args.r
         modData.Apocalipse_TSY_CachedMaxHits = data.maxHits
+
+        -- If this zombie belongs to a registered module, initialize client-side
+        -- module tracking (sounds, AI redirect, convergence). This handles
+        -- late-joining clients and chunk-reload scenarios where NemesisConvert
+        -- was already sent to other clients but this client missed it.
+        if args.m then
+            modData.Apocalipse_TSY_IsModuleZombie = true
+            local initOpts = nil
+            if data.isTough then
+                local maxHits = data.maxHits or RegionManager.Shared.DEFAULT_MAX_HITS
+                initOpts = {
+                    expectedToughness = {
+                        type    = "tough",
+                        maxHits = maxHits,
+                    },
+                }
+            end
+            RegionManager.ZombieModuleClient.initZombie(zombie, args.m, initOpts)
+        end
 
         -- Add to SpeedTracker if speed override was applied
         if data.isSprinter or data.isShambler then

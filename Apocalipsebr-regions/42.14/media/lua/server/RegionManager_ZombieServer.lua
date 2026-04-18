@@ -107,7 +107,7 @@ local function Apocalipse_TSY_PeriodicCleanup()
         for i = 0, zombies:size() - 1 do
             local zombie = zombies:get(i)
             if zombie and not zombie:isDead() then
-                local pid = ZombieHelper.GetPersistentID(zombie)
+                local pid = ZombieHelper.GetReliablePID(zombie)
                 if pid then
                     activeZombies[pid] = true
                 end
@@ -154,10 +154,27 @@ local function Apocalipse_TSY_OnClientCommand(module, command, player, args)
     -- ---- Tough zombie hit ----
     if command == "ZombieHitTough" and player and args.zombieID then
         local zombieID     = args.zombieID
-        local persistentID = args.persistentID
         local x, y         = args.x, args.y
         local globalData   = Apocalipse_TSY_GetGlobalModData()
-        local stored       = globalData.zombies[persistentID]
+
+        -- Compute persistentID SERVER-SIDE from the actual server zombie.
+        -- Uses GetReliablePID which reads the stamped AssignedPID from modData
+        -- (set during convertToNemesis) so the lookup matches globalData.zombies
+        -- even after dressInPersistentOutfit changed the raw persistentOutfitID.
+        local persistentID = nil
+        local zombie = ZombieHelper.FindZombieByOnlineID(zombieID)
+        if zombie then
+            persistentID = ZombieHelper.GetReliablePID(zombie)
+        end
+
+        -- Fallback to client-sent PID only if server zombie not found
+        if not persistentID then
+            persistentID = args.persistentID
+            print("Apocalipse_TSY Server: ZombieHitTough fallback to client PID=" ..
+                  tostring(persistentID) .. " (zombie onlineID=" .. tostring(zombieID) .. " not found on server)")
+        end
+
+        local stored = persistentID and globalData.zombies[persistentID]
 
         if stored and stored.isTough then
             if not stored.toughnessHitCounter then stored.toughnessHitCounter = 0 end
@@ -166,30 +183,35 @@ local function Apocalipse_TSY_OnClientCommand(module, command, player, args)
             local isExhausted = false
             if stored.toughnessHitCounter < maxHits then
                 stored.toughnessHitCounter = stored.toughnessHitCounter + 1
-                print("Apocalipse_TSY Server: Tough zombie " .. zombieID .. " hit (" ..
+                print("Apocalipse_TSY Server: Tough zombie pid=" .. tostring(persistentID) .. " hit (" ..
                       stored.toughnessHitCounter .. "/" .. maxHits .. ")")
             else
                 isExhausted = true
-                print("Apocalipse_TSY Server: Tough zombie " .. zombieID .. " exhausted all lives")
+                print("Apocalipse_TSY Server: Tough zombie pid=" .. tostring(persistentID) .. " exhausted all lives")
             end
 
             ZombieHelper.BroadcastToAll("Apocalipse_TSY", "ToughZombieHit", {
-                zombieID    = zombieID,
-                hitCounter  = stored.toughnessHitCounter,
-                maxHits     = maxHits,
-                x           = x,
-                y           = y,
-                isExhausted = isExhausted,
+                zombieID     = zombieID,
+                persistentID = persistentID,
+                hitCounter   = stored.toughnessHitCounter,
+                maxHits      = maxHits,
+                x            = x,
+                y            = y,
+                isExhausted  = isExhausted,
             })
         else
-            -- No stored data – broadcast exhausted so client stops mitigating
+            -- No stored data - broadcast exhausted so client stops mitigating
+            print("Apocalipse_TSY Server: ZombieHitTough no match for pid=" ..
+                  tostring(persistentID) .. " (onlineID=" .. tostring(zombieID) ..
+                  ", clientPID=" .. tostring(args.persistentID) .. ")")
             ZombieHelper.BroadcastToAll("Apocalipse_TSY", "ToughZombieHit", {
-                zombieID    = zombieID,
-                hitCounter  = RegionManager.Shared.DEFAULT_MAX_HITS,
-                maxHits     = RegionManager.Shared.DEFAULT_MAX_HITS,
-                x           = x,
-                y           = y,
-                isExhausted = true,
+                zombieID     = zombieID,
+                persistentID = persistentID,
+                hitCounter   = RegionManager.Shared.DEFAULT_MAX_HITS,
+                maxHits      = RegionManager.Shared.DEFAULT_MAX_HITS,
+                x            = x,
+                y            = y,
+                isExhausted  = true,
             })
         end
         return
@@ -221,25 +243,7 @@ local function Apocalipse_TSY_OnClientCommand(module, command, player, args)
             if stored then
                 found = found + 1
             else
-                -- Check if zombie matches a registered module (by outfit name)
-                local outfitName = request.outfitName
-                -- Fallback: look up outfit server-side if client didn't send it
-                if not outfitName then
-                    local serverZombie = ZombieHelper.FindZombieByOnlineID(zombieID)
-                    if serverZombie then
-                        outfitName = serverZombie:getOutfitName()
-                    end
-                end
-
-                local moduleDecisions = ZombieHelper.ResolveModuleOverrides(outfitName, request.x, request.y)
-                if moduleDecisions then
-                    -- Module zombie: use guaranteed overrides instead of region RNG
-                    stored = moduleDecisions
-                    globalData.zombies[persistentID] = stored
-                else
-                    -- Normal zombie: resolve via region-based rolling
-                    stored = RegionManagerZombie_OnZombieCreate(persistentID, request.x, request.y)
-                end
+                stored = RegionManagerZombie_OnZombieCreate(persistentID, request.x, request.y)
                 notFound = notFound + 1
             end
 
@@ -315,7 +319,7 @@ end)
 
 local function RegionManagerZombie_OnZombieDead(zombie)
     if not zombie then return end
-    local persistentID = ZombieHelper.GetPersistentID(zombie)
+    local persistentID = ZombieHelper.GetReliablePID(zombie)
     if not persistentID then return end
     local globalData = Apocalipse_TSY_GetGlobalModData()
     if globalData.zombies[persistentID] then

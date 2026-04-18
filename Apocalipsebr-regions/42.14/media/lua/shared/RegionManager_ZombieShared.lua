@@ -124,6 +124,21 @@ function RegionManager.Shared.GetZombiePersistentID(zombie)
     return string.format("%d_%d", outfit, female)
 end
 
+--- Get a reliable persistent ID that survives outfit changes.
+--- Module zombies have their PID stamped into modData at conversion time
+--- (before dressInPersistentOutfit changes the underlying persistentOutfitID).
+--- Normal zombies fall through to the computed PID (no behavior change).
+---@param zombie IsoZombie
+---@return string persistentID
+function RegionManager.Shared.GetReliablePID(zombie)
+    local modData = zombie:getModData()
+    local assigned = modData.Apocalipse_TSY_AssignedPID
+    if assigned then
+        return assigned
+    end
+    return RegionManager.Shared.GetZombiePersistentID(zombie)
+end
+
 -- Make zombie sprint
 ---@param zombie IsoZombie
 function RegionManager.Shared.makeSprint(zombie, sandboxOptions)
@@ -949,11 +964,12 @@ end
 
 -- CLIENT-SIDE: Apply the toughness effect received from server broadcast
 -- Called by the client command handler in RegionManager_ZombieClient.lua
----@param zombieID number The online ID of the zombie
+---@param zombieID number The online ID of the zombie (used for log output)
+---@param persistentID string|nil The server-computed persistent ID
 ---@param hitCounter number The authoritative hit counter from server
 ---@param maxHits number The maximum hits before zombie can die
 ---@param isExhausted boolean True if zombie has used all its extra lives
-function RegionManager.Shared.ApplyToughZombieHit(zombieID, hitCounter, maxHits, isExhausted)
+function RegionManager.Shared.ApplyToughZombieHit(zombieID, persistentID, hitCounter, maxHits, isExhausted)
     local player = getPlayer()
     if not player then
         return
@@ -971,28 +987,38 @@ function RegionManager.Shared.ApplyToughZombieHit(zombieID, hitCounter, maxHits,
 
     for i = 0, zombieList:size() - 1 do
         local zombie = zombieList:get(i)
-        if zombie and not zombie:isDead() and zombie:getOnlineID() == zombieID then
-            local modData = zombie:getModData()
-
-            -- Sync authoritative counter from server
-            modData.Apocalipse_TSY_ToughnessHitCounter = hitCounter
-            modData.Apocalipse_TSY_ToughnessMaxHits = maxHits
-
-            if not isExhausted then
-                -- Still has lives: make immune to this hit + stagger
-                zombie:setAvoidDamage(true)
-                zombie:setKnockedDown(false)
-                zombie:setStaggerBack(true)
-                print("Apocalipse_TSY: Tough zombie " .. zombieID .. " resisted hit (" .. hitCounter .. "/" .. maxHits .. ")")
+        if zombie and not zombie:isDead() then
+            -- Match by persistent ID (stable across ownership transfers)
+            -- Fall back to onlineID if no persistentID was provided
+            local matched = false
+            if persistentID then
+                matched = RegionManager.Shared.GetReliablePID(zombie) == persistentID
             else
-                -- All lives used up: fully disengage the toughness system.
-                -- Clear the type so OnWeaponHitCharacter stops intercepting hits
-                -- and the convergence loop stops re-enforcing toughness.
-                modData.Apocalipse_TSY_ToughnessType = "exhausted"
-                zombie:setAvoidDamage(false)
-                print("Apocalipse_TSY: Tough zombie " .. zombieID .. " exhausted all lives, now vulnerable")
+                matched = zombie:getOnlineID() == zombieID
             end
-            break
+            if matched then
+                local modData = zombie:getModData()
+
+                -- Sync authoritative counter from server
+                modData.Apocalipse_TSY_ToughnessHitCounter = hitCounter
+                modData.Apocalipse_TSY_ToughnessMaxHits = maxHits
+
+                if not isExhausted then
+                    -- Still has lives: make immune to this hit + stagger
+                    zombie:setAvoidDamage(true)
+                    zombie:setKnockedDown(false)
+                    zombie:setStaggerBack(true)
+                    print("Apocalipse_TSY: Tough zombie pid=" .. tostring(persistentID) .. " resisted hit (" .. hitCounter .. "/" .. maxHits .. ")")
+                else
+                    -- All lives used up: fully disengage the toughness system.
+                    -- Clear the type so OnWeaponHitCharacter stops intercepting hits
+                    -- and the convergence loop stops re-enforcing toughness.
+                    modData.Apocalipse_TSY_ToughnessType = "exhausted"
+                    zombie:setAvoidDamage(false)
+                    print("Apocalipse_TSY: Tough zombie pid=" .. tostring(persistentID) .. " exhausted all lives, now vulnerable")
+                end
+                break
+            end
         end
     end
 end
@@ -1033,7 +1059,7 @@ local function OnWeaponHitCharacter(attacker, target, weapon, damage)
             zombieID = zombieID,
             x = target:getX(),
             y = target:getY(),
-            persistentID = RegionManager.Shared.GetZombiePersistentID(target)
+            persistentID = RegionManager.Shared.GetReliablePID(target)
         })
     end
 end

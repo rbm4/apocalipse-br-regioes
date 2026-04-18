@@ -87,7 +87,7 @@ function RegionManager.ZombieModuleClient.initZombie(zombie, moduleId, opts)
         return
     end
 
-    local id = RegionManager.Shared.GetZombiePersistentID(zombie)
+    local id = RegionManager.Shared.GetReliablePID(zombie)
 
     -- Build periodic sound state (one timer per periodic entry)
     local periodicState = {}
@@ -326,7 +326,7 @@ end
 local function onZombieUpdate(zombie)
     if not zombie then return end
 
-    local id = RegionManager.Shared.GetZombiePersistentID(zombie)
+    local id = RegionManager.Shared.GetReliablePID(zombie)
     local data = trackedZombies[id]
     if not data then return end
 
@@ -363,40 +363,46 @@ local function onZombieUpdate(zombie)
                 data._outfitFixLogged = true
             end
             zombie:dressInNamedOutfit(data.expectedOutfit)
-            zombie:resetModel()
+            zombie:resetModelNextFrame()
         else
             -- Outfit matched; allow logging again if it drifts later
             data._outfitFixLogged = nil
         end
     end
 
+    -- Toughness convergence: repair modData if ownership transfer or
+    -- makeInactive cycle wiped the toughness fields.
     if data.expectedToughness then
-        local et = data.expectedToughness
-        local md = zombie:getModData()
-        -- Skip convergence if toughness has been exhausted -- the system
-        -- disengages completely after all lives are used up.
-        if md.Apocalipse_TSY_ToughnessType ~= "exhausted" then
-            -- Use tonumber() -- modData stores values as strings, et.* are numbers.
-            if et.type and md.Apocalipse_TSY_ToughnessType ~= et.type then
-                print("[ZMC-Converge] z=" .. tostring(id) ..
-                      " toughness type mismatch: got='" .. tostring(md.Apocalipse_TSY_ToughnessType) ..
-                      "' expected='" .. tostring(et.type) .. "', fixing")
-                md.Apocalipse_TSY_ToughnessType = et.type
+        local modData = zombie:getModData()
+        local curType = modData.Apocalipse_TSY_ToughnessType
+        -- Only converge if not exhausted (exhausted = system disengaged)
+        if curType ~= "exhausted" then
+            local expected = data.expectedToughness
+            local needsFix = false
+            if curType ~= expected.type then
+                needsFix = true
             end
-            if et.maxHits and tonumber(md.Apocalipse_TSY_ToughnessMaxHits) ~= et.maxHits then
-                print("[ZMC-Converge] z=" .. tostring(id) ..
-                      " maxHits mismatch: got=" .. tostring(md.Apocalipse_TSY_ToughnessMaxHits) ..
-                      " expected=" .. tostring(et.maxHits) .. ", fixing")
-                md.Apocalipse_TSY_ToughnessMaxHits = et.maxHits
+            local curMax = tonumber(modData.Apocalipse_TSY_ToughnessMaxHits)
+            if curMax ~= expected.maxHits then
+                needsFix = true
             end
-            -- Only seed the counter if it's missing entirely (first application).
-            -- Never reset it during convergence -- that would erase hit progress.
-            if md.Apocalipse_TSY_ToughnessHitCounter == nil then
-                print("[ZMC-Converge] z=" .. tostring(id) ..
-                      " HitCounter was nil, seeding to 0 (type=" ..
-                      tostring(md.Apocalipse_TSY_ToughnessType) ..
-                  ", maxHits=" .. tostring(md.Apocalipse_TSY_ToughnessMaxHits) .. ")")
-                md.Apocalipse_TSY_ToughnessHitCounter = 0
+            if needsFix then
+                if not data._toughFixLogged then
+                    print("[ZMC-Converge] z=" .. tostring(id) ..
+                          " toughness mismatch: type=" .. tostring(curType) ..
+                          " maxHits=" .. tostring(curMax) ..
+                          " expected=" .. tostring(expected.type) ..
+                          "/" .. tostring(expected.maxHits) .. ", fixing")
+                    data._toughFixLogged = true
+                end
+                modData.Apocalipse_TSY_ToughnessType = expected.type
+                modData.Apocalipse_TSY_ToughnessMaxHits = expected.maxHits
+                -- Preserve existing hit counter (never reset to 0)
+                if not modData.Apocalipse_TSY_ToughnessHitCounter then
+                    modData.Apocalipse_TSY_ToughnessHitCounter = 0
+                end
+            else
+                data._toughFixLogged = nil
             end
         end
     end
@@ -488,7 +494,7 @@ local function onWeaponHitCharacter(attacker, target, weapon, damage)
     if not player or attacker ~= player then return end
     if not instanceof(target, "IsoZombie") or not target:isAlive() then return end
 
-    local id = RegionManager.Shared.GetZombiePersistentID(target)
+    local id = RegionManager.Shared.GetReliablePID(target)
     local data = trackedZombies[id]
     if not data then return end
 
@@ -496,12 +502,41 @@ local function onWeaponHitCharacter(attacker, target, weapon, damage)
 end
 
 -- ============================================================================
--- Tick counter
+-- Tick counter + periodic outfit enforcement
+-- OnZombieUpdate doesn't fire every frame, so we enforce outfit on a fixed
+-- schedule by scanning all tracked zombies from the cell zombie list.
 -- ============================================================================
+
+local OUTFIT_ENFORCE_INTERVAL = 30  -- ~0.5 seconds at 60 FPS
 
 local function onTick()
     tickCounter = tickCounter + 1
     tickFadingThemes()
+
+    -- Periodic outfit enforcement for tracked module zombies
+    if tickCounter % OUTFIT_ENFORCE_INTERVAL == 0 then
+        local player = getPlayer()
+        if not player then return end
+        local cell = player:getCell()
+        if not cell then return end
+        local zombieList = cell:getZombieList()
+        if not zombieList then return end
+
+        for i = 0, zombieList:size() - 1 do
+            local zombie = zombieList:get(i)
+            if zombie and not zombie:isDead() then
+                local pid = RegionManager.Shared.GetReliablePID(zombie)
+                local data = trackedZombies[pid]
+                if data and data.expectedOutfit then
+                    local curOutfit = zombie:getOutfitName()
+                    if curOutfit ~= data.expectedOutfit then
+                        zombie:dressInNamedOutfit(data.expectedOutfit)
+                        zombie:resetModelNextFrame()
+                    end
+                end
+            end
+        end
+    end
 end
 
 -- ============================================================================
