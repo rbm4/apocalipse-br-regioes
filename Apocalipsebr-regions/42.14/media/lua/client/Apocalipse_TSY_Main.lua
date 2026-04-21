@@ -56,6 +56,19 @@ local Apocalipse_TSY_ClusterEvents  = {}
 local Apocalipse_TSY_CachedWorldHours     = 0
 local Apocalipse_TSY_TickCounter          = 0
 
+-- FRAME CACHE — populated once per tick, read per-zombie (eliminates per-zombie per-frame calls)
+local Apocalipse_TSY_CachedPlayer         = nil
+local Apocalipse_TSY_CachedPX             = 0
+local Apocalipse_TSY_CachedPY             = 0
+local Apocalipse_TSY_CachedTimeAllowed    = false
+local Apocalipse_TSY_CachedVars           = nil
+local Apocalipse_TSY_CachedTickRate       = 12
+local Apocalipse_TSY_CachedFarRange       = 150
+local Apocalipse_TSY_CachedMaxProcessDist = 220
+local Apocalipse_TSY_CachedScreechChance  = 60
+local Apocalipse_TSY_CachedChaseChance    = 50
+local Apocalipse_TSY_CachedEnableNear     = true
+
 local function Apocalipse_TSY_GetSandbox()
     if SandboxVars and SandboxVars.Apocalipse_TSY then
         return SandboxVars.Apocalipse_TSY
@@ -160,16 +173,13 @@ local function Apocalipse_TSY_Delay(func, delay)
 end
 
 local function Apocalipse_TSY_CanClusterScream(x, y, timeNow, vars)
-    local radius    = Apocalipse_TSY_ClusterRadius
-    local cooldown  = Apocalipse_TSY_ClusterCooldownHours
+    -- Expired events are pruned once per frame in OnTick; only count active events here.
+    local radius     = Apocalipse_TSY_ClusterRadius
     local maxCluster = Apocalipse_TSY_MaxClusterScreams
 
     if vars then
         if vars.ClusterRadius and vars.ClusterRadius > 0 then
             radius = vars.ClusterRadius
-        end
-        if vars.ClusterCooldownHours and vars.ClusterCooldownHours > 0 then
-            cooldown = vars.ClusterCooldownHours
         end
         if vars.MaxClusterScreams and vars.MaxClusterScreams > 0 then
             maxCluster = vars.MaxClusterScreams
@@ -177,25 +187,18 @@ local function Apocalipse_TSY_CanClusterScream(x, y, timeNow, vars)
     end
 
     local radiusSq = radius * radius
-    local count = 0
-    local i = 1
+    local count    = 0
 
-    while i <= #Apocalipse_TSY_ClusterEvents do
+    for i = 1, #Apocalipse_TSY_ClusterEvents do
         local ev = Apocalipse_TSY_ClusterEvents[i]
-        if timeNow - ev.t > cooldown then
-            table.remove(Apocalipse_TSY_ClusterEvents, i)
-        else
-            local dx = x - ev.x
-            local dy = y - ev.y
-            if dx * dx + dy * dy <= radiusSq then
-                count = count + 1
+        local dx = x - ev.x
+        local dy = y - ev.y
+        if dx * dx + dy * dy <= radiusSq then
+            count = count + 1
+            if count >= maxCluster then
+                return false
             end
-            i = i + 1
         end
-    end
-
-    if count >= maxCluster then
-        return false
     end
 
     return true
@@ -306,45 +309,12 @@ local function Apocalipse_TSY_TriggerAlert(playerObj, vars, screamingZombie)
     addSound(playerObj, x, y, 0, radius, radius)
 end
 
-local function Apocalipse_TSY_IsSprinter(zombie)
-
-    if not zombie then
-        return false
-    end
-
-    if zombie:isDead() then
-        return false
-    end
-
-    if zombie.isFakeDead and zombie:isFakeDead() then
-        return false
-    end
-
-    if zombie.isOnFloor and zombie:isOnFloor() then
-        return false
-    end
-
-    if zombie.getVehicle and zombie:getVehicle() ~= nil then
-        return false
-    end
-
-    if not zombie.getVariableString then
-        return false
-    end
-
-    -- Otherwise check current walkType
-    local walkType = zombie:getVariableString("zombiewalktype")
-    if not walkType then
-        return false
-    end
-
-    walkType = tostring(walkType)
-
-    if not string.find(walkType, "WTSprint") and not string.find(string.lower(walkType), "sprint") then
-        return false
-    end
-
-    return true
+-- IsSprinter: zero Java-bridge reads.
+-- RegionManager.ServerSideProperties writes modData.Apocalipse_TSY_ExpectedSpeed = "sprinter"
+-- for every zombie it designates as a sprinter, and RevalidateZombieSpeed keeps it in sync.
+-- We trust that flag instead of calling zombie:getVariableString("zombiewalktype").
+local function Apocalipse_TSY_IsSprinter(modData)
+    return modData.Apocalipse_TSY_ExpectedSpeed == "sprinter"
 end
 
 
@@ -360,12 +330,35 @@ local function Apocalipse_TSY_OnZombieUpdate(zombie)
         return
     end
 
-    if not Apocalipse_TSY_IsSprinter(zombie) then
+    -- 2. Single modData access (original had a duplicate call that shadowed the first — bug fixed)
+    local modData = zombie:getModData()
+
+    -- 3. TickRate throttle BEFORE IsSprinter — avoids the Java bridge call N-1 frames out of every N
+    local tickRate = Apocalipse_TSY_CachedTickRate
+    if tickRate > 1 then
+        local nextTick = modData.Apocalipse_TSY_NextTick or 0
+        if Apocalipse_TSY_TickCounter < nextTick then
+            return
+        end
+        modData.Apocalipse_TSY_NextTick = Apocalipse_TSY_TickCounter + tickRate
+    end
+
+    -- 4. Permanent done flag: zombie exhausted all screams, skip with a single bool read
+    if modData.Apocalipse_TSY_Done then
         return
     end
 
-    -- Skip registered module zombies (bosses) - they have their own sound system
-    local modData = zombie:getModData()
+    -- 5. Frame-cached checks — zero call overhead
+    if not Apocalipse_TSY_CachedTimeAllowed then
+        return
+    end
+
+    local player = Apocalipse_TSY_CachedPlayer
+    if not player then
+        return
+    end
+
+    -- 6. Skip registered module zombies (bosses) — they have their own sound system
     if modData.Apocalipse_TSY_IsModuleZombie then
         return
     end
@@ -375,15 +368,7 @@ local function Apocalipse_TSY_OnZombieUpdate(zombie)
         return
     end
     
-    if not Apocalipse_TSY_TimeAllowed() then
-        return
-    end
-
-    local player = getPlayer()
-    if not player or player:isDead() then
-        return
-    end
-
+    -- 7. Target check
     if zombie.getTarget then
         local target = zombie:getTarget()
         if target ~= player then
@@ -391,33 +376,12 @@ local function Apocalipse_TSY_OnZombieUpdate(zombie)
         end
     end
 
-
-    local vars = Apocalipse_TSY_GetSandbox()
-
-    local tickRate = Apocalipse_TSY_DefaultTickRate
-    if vars and vars.TickRate and vars.TickRate > 0 then
-        tickRate = vars.TickRate
-    end
-
-    local modData = zombie:getModData()
-
-    if tickRate and tickRate > 1 then
-        local nextTick = modData.Apocalipse_TSY_NextTick or 0
-        if Apocalipse_TSY_TickCounter < nextTick then
-            return
-        end
-        modData.Apocalipse_TSY_NextTick = Apocalipse_TSY_TickCounter + tickRate
-    end
-
-    local maxProcessDist = Apocalipse_TSY_DefaultMaxDistance
-    if vars and vars.MaxProcessDistance and vars.MaxProcessDistance > 0 then
-        maxProcessDist = vars.MaxProcessDistance
-    end
-
+    -- 8. AABB coarse cull — pure math, cached player position, no sqrt
+    local maxProcessDist = Apocalipse_TSY_CachedMaxProcessDist
     local zx = zombie:getX()
     local zy = zombie:getY()
-    local px = player:getX()
-    local py = player:getY()
+    local px = Apocalipse_TSY_CachedPX
+    local py = Apocalipse_TSY_CachedPY
 
     local dx = zx - px
     local dy = zy - py
@@ -426,57 +390,46 @@ local function Apocalipse_TSY_OnZombieUpdate(zombie)
         return
     end
 
-    local farRange = Apocalipse_TSY_FarRange
-    if vars and vars.FarRange and vars.FarRange > 0 then
-        farRange = vars.FarRange
+    -- 9. IsSprinter — pure modData flag read (zero Java-bridge cost)
+    if not Apocalipse_TSY_IsSprinter(modData) then
+        return
     end
 
+    -- 10. Precise distance (sqrt)
+    local farRange = Apocalipse_TSY_CachedFarRange
     local dist = zombie:DistTo(player)
     if not dist or dist < 0 or dist > farRange then
         return
     end
 
+    -- 11. LOS raycast — most expensive call; reached only when truly in range
     if not zombie:CanSee(player) then
         return
     end
+
+    -- 12. Scream limit check; stamp Done flag to avoid future re-entry cost
+    local totalAny = modData.Apocalipse_TSY_ScreamCount or 0
+    if Apocalipse_TSY_MaxScreamsPerZombie and Apocalipse_TSY_MaxScreamsPerZombie > 0 then
+        if totalAny >= Apocalipse_TSY_MaxScreamsPerZombie then
+            modData.Apocalipse_TSY_Done = true
+            return
+        end
+    end
+
+    -- All per-frame config already resolved in OnTick — no per-zombie var lookups needed
+    local vars           = Apocalipse_TSY_CachedVars
+    local timeNow        = Apocalipse_TSY_GetWorldTimeHours()
+    local x              = zx
+    local y              = zy
+    local lastAny        = modData.Apocalipse_TSY_LastAnyScreamTime or 0
+    local screechChance  = Apocalipse_TSY_CachedScreechChance
+    local chaseChance    = Apocalipse_TSY_CachedChaseChance
+    local enableNearScream = Apocalipse_TSY_CachedEnableNear
 
     local voiceIndex = modData.Apocalipse_TSY_VoiceIndex
     if not voiceIndex then
         voiceIndex = Apocalipse_TSY_NextVoice()
         modData.Apocalipse_TSY_VoiceIndex = voiceIndex
-    end
-
-    local timeNow  = Apocalipse_TSY_GetWorldTimeHours()
-    local x        = zx
-    local y        = zy
-
-    local lastAny  = modData.Apocalipse_TSY_LastAnyScreamTime or 0
-    local totalAny = modData.Apocalipse_TSY_ScreamCount or 0
-
-    if Apocalipse_TSY_MaxScreamsPerZombie and Apocalipse_TSY_MaxScreamsPerZombie > 0 then
-        if totalAny >= Apocalipse_TSY_MaxScreamsPerZombie then
-            return
-        end
-    end
-
-    local screechChance = Apocalipse_TSY_DefaultScreechChance
-    local chaseChance   = Apocalipse_TSY_ChaseScreechChance
-    local enableNearScream = true
-
-    if vars then
-        local vScreech = tonumber(vars.ScreechChance)
-        if vScreech and vScreech >= 0 and vScreech <= 100 then
-            screechChance = vScreech
-        end
-
-        local vChase = tonumber(vars.ChaseScreechChance)
-        if vChase and vChase >= 0 and vChase <= 100 then
-            chaseChance = vChase
-        end
-
-        if vars.EnableNearScream ~= nil then
-            enableNearScream = vars.EnableNearScream
-        end
     end
 
     if not modData.Apocalipse_TSY_HasFarScreamed then
@@ -563,6 +516,7 @@ local function Apocalipse_TSY_OnZombieDead(zombie)
     modData.Apocalipse_TSY_ScreamCount       = nil
     modData.Apocalipse_TSY_NextTick          = nil
     modData.Apocalipse_TSY_IgnoreAlertUntil  = nil
+    modData.Apocalipse_TSY_Done              = nil
 end
 
 local function Apocalipse_TSY_OnGameStart()
@@ -571,8 +525,68 @@ local function Apocalipse_TSY_OnGameStart()
 end
 
 local function Apocalipse_TSY_OnTick()
-    Apocalipse_TSY_TickCounter     = Apocalipse_TSY_TickCounter + 1
+    Apocalipse_TSY_TickCounter      = Apocalipse_TSY_TickCounter + 1
     Apocalipse_TSY_CachedWorldHours = getGameTime():getWorldAgeHours()
+
+    -- Cache player reference and position (read once, used by every zombie this frame)
+    local p = getPlayer()
+    Apocalipse_TSY_CachedPlayer = (p and not p:isDead()) and p or nil
+    if Apocalipse_TSY_CachedPlayer then
+        Apocalipse_TSY_CachedPX = p:getX()
+        Apocalipse_TSY_CachedPY = p:getY()
+    end
+
+    -- Cache time-allowed flag (depends on sandbox + climate, constant per frame)
+    Apocalipse_TSY_CachedTimeAllowed = Apocalipse_TSY_TimeAllowed()
+
+    -- Cache sandbox vars and resolve all per-frame config once
+    local vars = Apocalipse_TSY_GetSandbox()
+    Apocalipse_TSY_CachedVars = vars
+
+    local tickRate = Apocalipse_TSY_DefaultTickRate
+    if vars and vars.TickRate and vars.TickRate > 0 then tickRate = vars.TickRate end
+    Apocalipse_TSY_CachedTickRate = tickRate
+
+    local farRange = Apocalipse_TSY_FarRange
+    if vars and vars.FarRange and vars.FarRange > 0 then farRange = vars.FarRange end
+    Apocalipse_TSY_CachedFarRange = farRange
+
+    local maxDist = Apocalipse_TSY_DefaultMaxDistance
+    if vars and vars.MaxProcessDistance and vars.MaxProcessDistance > 0 then maxDist = vars.MaxProcessDistance end
+    Apocalipse_TSY_CachedMaxProcessDist = maxDist
+
+    local screechChance = Apocalipse_TSY_DefaultScreechChance
+    if vars then
+        local v = tonumber(vars.ScreechChance)
+        if v and v >= 0 and v <= 100 then screechChance = v end
+    end
+    Apocalipse_TSY_CachedScreechChance = screechChance
+
+    local chaseChance = Apocalipse_TSY_ChaseScreechChance
+    if vars then
+        local v = tonumber(vars.ChaseScreechChance)
+        if v and v >= 0 and v <= 100 then chaseChance = v end
+    end
+    Apocalipse_TSY_CachedChaseChance = chaseChance
+
+    local enableNear = true
+    if vars and vars.EnableNearScream ~= nil then enableNear = vars.EnableNearScream end
+    Apocalipse_TSY_CachedEnableNear = enableNear
+
+    -- Prune expired cluster events once per frame instead of per-zombie
+    local cooldown = Apocalipse_TSY_ClusterCooldownHours
+    if vars and vars.ClusterCooldownHours and vars.ClusterCooldownHours > 0 then
+        cooldown = vars.ClusterCooldownHours
+    end
+    local timeNow = Apocalipse_TSY_CachedWorldHours
+    local i = 1
+    while i <= #Apocalipse_TSY_ClusterEvents do
+        if timeNow - Apocalipse_TSY_ClusterEvents[i].t > cooldown then
+            table.remove(Apocalipse_TSY_ClusterEvents, i)
+        else
+            i = i + 1
+        end
+    end
 end
 
 if not isServer() then
