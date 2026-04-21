@@ -6,6 +6,7 @@
 if not isClient() then return end
 
 require "RegionManager_Config"
+require "RegionManager_MapPicker"
 require "ISUI/ISPanel"
 require "ISUI/ISButton"
 require "ISUI/ISScrollingListBox"
@@ -63,6 +64,13 @@ function ISRegionManagerAdminPanel:createChildren()
     self.refreshBtn:instantiate()
     self.refreshBtn.borderColor = {r=1, g=1, b=1, a=0.4}
     self:addChild(self.refreshBtn)
+    
+    -- New Region button
+    self.newRegionBtn = ISButton:new(10 + (btnWid + 10) * 2, btnY, btnWid, btnHgt, "New Region", self, ISRegionManagerAdminPanel.onNewRegion)
+    self.newRegionBtn:initialise()
+    self.newRegionBtn:instantiate()
+    self.newRegionBtn.borderColor = {r=0.3, g=1, b=0.3, a=0.6}
+    self:addChild(self.newRegionBtn)
     
     -- Close button
     self.closeBtn = ISButton:new(self.width - btnWid - 10, btnY, btnWid, btnHgt, "Close", self, ISRegionManagerAdminPanel.onClose)
@@ -177,6 +185,11 @@ function ISRegionManagerAdminPanel:onTeleport()
     end
     
     -- Close panel after teleport
+    self:close()
+end
+
+function ISRegionManagerAdminPanel:onNewRegion()
+    RegionManager.MapPicker.Open()
     self:close()
 end
 

@@ -198,6 +198,12 @@ function RegionManager.ClientTick.setTickInterval(ticks)
     TickInterval = ticks
 end
 
+-- Reset zone state so entry/exit events re-fire after zone data refresh
+function RegionManager.ClientTick.resetZoneState()
+    PreviousZones = {}
+    log("Zone state reset – entry/exit events will re-fire on next tick")
+end
+
 -- ============================================================================
 -- Event registration
 -- ============================================================================

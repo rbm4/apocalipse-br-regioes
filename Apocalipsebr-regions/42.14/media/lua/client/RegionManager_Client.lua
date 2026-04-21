@@ -62,6 +62,29 @@ local function OnServerCommand(module, command, args)
         RegionManager.Client.zoneData = args.zones or {}
         log("Received " .. tostring(#RegionManager.Client.zoneData) .. " zone boundaries from server")
         log("Zone outlines will be drawn continuously via OnPostRender")
+
+        -- Reset client tick zone state so entry/exit events re-fire for new zones
+        if RegionManager.ClientTick and RegionManager.ClientTick.resetZoneState then
+            RegionManager.ClientTick.resetZoneState()
+        end
+
+    elseif command == "RegionAdded" then
+        -- New region was successfully added
+        local player = getPlayer()
+        if player then
+            local msg = "Region '" .. (args.name or args.id) .. "' created successfully! All zones reloaded."
+            player:Say(msg, 0.3, 1, 0.3, UIFont.Medium, 3, "radio")
+        end
+        log("Region added: " .. tostring(args.id))
+
+    elseif command == "RegionAddFailed" then
+        -- Region creation failed
+        local player = getPlayer()
+        if player then
+            local msg = "Failed to create region: " .. (args.reason or "Unknown error")
+            player:Say(msg, 1, 0.3, 0.3, UIFont.Medium, 3, "radio")
+        end
+        log("Region add failed: " .. tostring(args.reason))
     end
 end
 

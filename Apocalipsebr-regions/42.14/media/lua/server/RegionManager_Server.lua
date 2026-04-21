@@ -469,6 +469,97 @@ local function OnClientCommand(module, command, player, args)
         -- end
         -- print("[DEBUG SERVER] Broadcasted zone exit to " .. (allPlayers:size() - 1) .. " other players")
 
+    elseif command == "AddRegion" then
+        -- Admin command to add a new region live
+        if player:getAccessLevel() == "None" then
+            log("WARNING: Non-admin player " .. player:getUsername() .. " tried to add a region")
+            sendServerCommand(player, "RegionManager", "RegionAddFailed", { reason = "Admin access required" })
+            return
+        end
+
+        -- Validate required fields
+        local id = args.id
+        local name = args.name
+        if not id or id == "" or not name or name == "" then
+            sendServerCommand(player, "RegionManager", "RegionAddFailed", { reason = "Region ID and name are required" })
+            return
+        end
+        if not args.x1 or not args.y1 or not args.x2 or not args.y2 then
+            sendServerCommand(player, "RegionManager", "RegionAddFailed", { reason = "All four coordinates are required" })
+            return
+        end
+
+        -- Load current regions from file
+        local currentRegions = loadRegionsFromFile()
+
+        -- Check for duplicate ID
+        for _, existing in ipairs(currentRegions) do
+            if existing.id == id then
+                sendServerCommand(player, "RegionManager", "RegionAddFailed", { reason = "Region ID '" .. id .. "' already exists" })
+                return
+            end
+        end
+
+        -- Build new region definition
+        local newRegion = {
+            id = id,
+            name = name,
+            x1 = args.x1,
+            y1 = args.y1,
+            x2 = args.x2,
+            y2 = args.y2,
+            z = args.z or 0,
+            enabled = args.enabled ~= false,
+            categories = args.categories or {},
+            customProperties = args.customProperties or {}
+        }
+
+        -- Append and save to file
+        table.insert(currentRegions, newRegion)
+        local writeOk = writeRegionsFile(currentRegions)
+        if not writeOk then
+            sendServerCommand(player, "RegionManager", "RegionAddFailed", { reason = "Failed to write regions file" })
+            return
+        end
+
+        log("Region '" .. id .. "' added by " .. player:getUsername() .. ", re-initializing all zones...")
+
+        -- Hot-swap: re-run full initialization (cleanup + reload + register)
+        registerAllRegions()
+
+        -- Broadcast updated zone boundaries to ALL connected players
+        local zoneList = {}
+        for zid, data in pairs(RegionManager.Server.registeredZones or {}) do
+            table.insert(zoneList, {
+                id = data.region.id,
+                name = data.region.name,
+                bounds = data.bounds,
+                color = data.properties.color or { r = 0, g = 255, b = 0 },
+                pvpEnabled = data.properties.pvpEnabled or false,
+                sprinterChance = data.properties.sprinterChance or 0,
+                shamblerChance = data.properties.shamblerChance or 0,
+                hawkVisionChance = data.properties.hawkVisionChance or 0,
+                badVisionChance = data.properties.badVisionChance or 0,
+                goodHearingChance = data.properties.goodHearingChance or 0,
+                badHearingChance = data.properties.badHearingChance or 0,
+                zombieArmorFactor = data.properties.zombieArmorFactor or 0,
+                resistantChance = data.properties.resistantChance or 0,
+                announceEntry = data.properties.announceEntry or false,
+                announceExit = data.properties.announceExit or false,
+                message = data.properties.message or ""
+            })
+        end
+
+        local allPlayers = getOnlinePlayers()
+        for i = 0, allPlayers:size() - 1 do
+            local p = allPlayers:get(i)
+            sendServerCommand(p, "RegionManager", "AllZoneBoundaries", { zones = zoneList })
+        end
+
+        -- Confirm to the requesting admin
+        sendServerCommand(player, "RegionManager", "RegionAdded", { id = id, name = name })
+        log("Region '" .. id .. "' successfully added and broadcast to " .. allPlayers:size() .. " players")
+
     elseif command == "ExportConfig" then
         -- Admin command to export config
         if player:getAccessLevel() ~= "None" then
