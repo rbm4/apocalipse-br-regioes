@@ -114,6 +114,22 @@ local PendingZombies = {
 local PendingConfirmations = {} -- { [persistentID] = { zombieRef, x, y, onlineID } }
 local PendingIDIndex = {} -- { [onlineID] = persistentID } reverse lookup
 
+-- Sandbox-tuned cache hygiene for client-side decision memory.
+local function getRegionManagerSetting(name, default)
+    if SandboxVars and SandboxVars.RegionManager and SandboxVars.RegionManager[name] ~= nil then
+        return SandboxVars.RegionManager[name]
+    end
+    return default
+end
+
+local function clampInt(v, minV, maxV, default)
+    local n = tonumber(v) or default
+    n = math.floor(n)
+    if n < minV then return minV end
+    if n > maxV then return maxV end
+    return n
+end
+
 -- ============================================================================
 -- DecidedByPID: client-side cache of server decisions keyed by persistentID.
 --
@@ -136,6 +152,82 @@ local PendingIDIndex = {} -- { [onlineID] = persistentID } reverse lookup
 -- a few dozen entries per session.
 -- ============================================================================
 local DecidedByPID = {} -- { [persistentID] = { data=<decoded>, raw=<string>, moduleId=<string|nil> } }
+
+-- Epoch-based retention knobs (cheap: no Java time calls).
+local DecisionEpoch = 0
+local DecisionCount = 0
+local LastDecisionSweepEpoch = 0
+local LastPendingSweepEpoch = 0
+
+local DECISION_TTL_EPOCHS = clampInt(getRegionManagerSetting("DecisionCacheTtlEpochs", 300), 30, 3600, 300)
+local DECISION_SWEEP_EVERY_EPOCHS = clampInt(getRegionManagerSetting("DecisionCacheSweepEveryEpochs", 60), 5, 600, 60)
+local DECISION_SWEEP_MIN_AGE_EPOCHS = clampInt(getRegionManagerSetting("DecisionCacheSweepMinAgeEpochs", 30), 0, 1800, 30)
+local DECISION_COORD_MAX_DIST = clampInt(getRegionManagerSetting("DecisionCacheCoordMaxDist", 500), 50, 5000, 500)
+local DECISION_COORD_MAX_DIST2 = DECISION_COORD_MAX_DIST * DECISION_COORD_MAX_DIST
+local DECISION_MAX_ENTRIES = clampInt(getRegionManagerSetting("DecisionCacheMaxEntries", 256), 32, 4096, 256)
+
+local PENDING_CONFIRM_TTL_EPOCHS = clampInt(getRegionManagerSetting("PendingConfirmTtlEpochs", 90), 10, 900, 90)
+local PENDING_CONFIRM_SWEEP_EVERY_EPOCHS = clampInt(getRegionManagerSetting("PendingConfirmSweepEveryEpochs", 30), 5, 300, 30)
+
+local function dropDecision(pid)
+    if DecidedByPID[pid] ~= nil then
+        DecidedByPID[pid] = nil
+        DecisionCount = DecisionCount - 1
+        if DecisionCount < 0 then
+            DecisionCount = 0
+        end
+    end
+end
+
+local function sweepDecisionCache()
+    local cutoff = DecisionEpoch - DECISION_TTL_EPOCHS
+    local minAgeCutoff = DecisionEpoch - DECISION_SWEEP_MIN_AGE_EPOCHS
+    local oldestPid = nil
+    local oldestEpoch = math.huge
+
+    for pid, entry in pairs(DecidedByPID) do
+        local e = entry.lastEpoch or 0
+        if e <= minAgeCutoff then
+            if e <= cutoff then
+                dropDecision(pid)
+            elseif e < oldestEpoch then
+                oldestEpoch = e
+                oldestPid = pid
+            end
+        end
+    end
+
+    if DecisionCount > DECISION_MAX_ENTRIES and oldestPid then
+        -- Defensive bound: when above cap, evict oldest eligible entry.
+        dropDecision(oldestPid)
+    end
+
+    LastDecisionSweepEpoch = DecisionEpoch
+end
+
+local function sweepPendingConfirmations()
+    local cutoff = DecisionEpoch - PENDING_CONFIRM_TTL_EPOCHS
+    for persistentID, entry in pairs(PendingConfirmations) do
+        local created = entry.createdEpoch or 0
+        if created <= cutoff then
+            PendingConfirmations[persistentID] = nil
+            if entry.onlineID then
+                PendingIDIndex[entry.onlineID] = nil
+            end
+        end
+    end
+    LastPendingSweepEpoch = DecisionEpoch
+end
+
+local function runCacheHygiene()
+    if (DecisionEpoch - LastDecisionSweepEpoch) >= DECISION_SWEEP_EVERY_EPOCHS
+        or DecisionCount > DECISION_MAX_ENTRIES then
+        sweepDecisionCache()
+    end
+    if (DecisionEpoch - LastPendingSweepEpoch) >= PENDING_CONFIRM_SWEEP_EVERY_EPOCHS then
+        sweepPendingConfirmations()
+    end
+end
 
 --- Return true if the zombie's current live state already matches the
 --- cached decision, meaning ServerSideProperties would be a no-op.
@@ -322,10 +414,16 @@ local function applyConfirmedZombie(entry)
     -- chunk unload/reload). Any later zombie sharing this PID will use
     -- this cached decision without hitting the server.
     if entry.pid then
+        if DecidedByPID[entry.pid] == nil then
+            DecisionCount = DecisionCount + 1
+        end
         DecidedByPID[entry.pid] = {
             data     = data,
             raw      = entry.raw,
             moduleId = entry.moduleId,
+            lastEpoch = DecisionEpoch,
+            lastX = zombie:getX(),
+            lastY = zombie:getY(),
         }
     end
 
@@ -585,6 +683,9 @@ local function queuePop(i)
 end
 
 local function Apocalipse_TSY_ProcessPending()
+    DecisionEpoch = DecisionEpoch + 1
+    runCacheHygiene()
+
     -- Nothing to do and batch already drained.
     if PendingZombies.count == 0 and #ProposalBatch == 0 then
         IdleTolerance = 0
@@ -651,7 +752,23 @@ local function Apocalipse_TSY_ProcessPending()
                     -- match the decision, we don't even run makeInactive.
                     local cachedDecision = DecidedByPID[persistentID]
                     if cachedDecision then
+                        -- PID can collide across distant map areas; drop stale
+                        -- decision when this instance is far from the cached XY.
+                        local zx, zy = zombie:getX(), zombie:getY()
+                        local dx = (cachedDecision.lastX or zx) - zx
+                        local dy = (cachedDecision.lastY or zy) - zy
+                        if (dx * dx + dy * dy) > DECISION_COORD_MAX_DIST2 then
+                            dropDecision(persistentID)
+                            cachedDecision = nil
+                        end
+                    end
+
+                    if cachedDecision then
                         data.Apocalipse_TSY_Processed = true
+
+                        cachedDecision.lastEpoch = DecisionEpoch
+                        cachedDecision.lastX = zombie:getX()
+                        cachedDecision.lastY = zombie:getY()
 
                         if RegionManager.ZombieModuleClient and RegionManager.ZombieModuleClient.clearTrackedByPID then
                             RegionManager.ZombieModuleClient.clearTrackedByPID(persistentID)
@@ -714,7 +831,8 @@ local function Apocalipse_TSY_ProcessPending()
                                 zombieRef = zombie,
                                 x = zx,
                                 y = zy,
-                                onlineID = onlineID
+                                onlineID = onlineID,
+                                createdEpoch = DecisionEpoch,
                             }
                             PendingIDIndex[onlineID] = persistentID
 
@@ -765,6 +883,8 @@ end
 --
 -- SpeedRevalidation still uses the central ClientTick dispatcher because
 -- it is a periodic drift check that doesn't need per-frame granularity.
+-- Disabled for this stable ship build: speed enforcement will return in a
+-- later pass with safer pacing.
 -- ============================================================================
 
 Events.OnTick.Add(function()
@@ -775,7 +895,6 @@ Events.OnTick.Add(function()
     ProcessTickCounter = 0
     Apocalipse_TSY_ProcessPending()
     drainPendingApply()
-    -- SpeedTracker.revalidateBatch()
 end)
 
 -- ============================================================================

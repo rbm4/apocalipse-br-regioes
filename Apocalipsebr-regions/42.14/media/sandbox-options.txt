@@ -171,3 +171,73 @@ option RegionManager.DebugMode
     page = RegionManager,
     translation = RegionManager_DebugMode,
 }
+
+option RegionManager.DecisionCacheTtlEpochs
+{
+    type = integer,
+    min = 30,
+    max = 3600,
+    default = 300,
+    page = RegionManager,
+    translation = RegionManager_DecisionCacheTtlEpochs,
+}
+
+option RegionManager.DecisionCacheSweepEveryEpochs
+{
+    type = integer,
+    min = 5,
+    max = 600,
+    default = 60,
+    page = RegionManager,
+    translation = RegionManager_DecisionCacheSweepEveryEpochs,
+}
+
+option RegionManager.DecisionCacheSweepMinAgeEpochs
+{
+    type = integer,
+    min = 0,
+    max = 1800,
+    default = 30,
+    page = RegionManager,
+    translation = RegionManager_DecisionCacheSweepMinAgeEpochs,
+}
+
+option RegionManager.DecisionCacheCoordMaxDist
+{
+    type = integer,
+    min = 50,
+    max = 5000,
+    default = 500,
+    page = RegionManager,
+    translation = RegionManager_DecisionCacheCoordMaxDist,
+}
+
+option RegionManager.DecisionCacheMaxEntries
+{
+    type = integer,
+    min = 32,
+    max = 4096,
+    default = 256,
+    page = RegionManager,
+    translation = RegionManager_DecisionCacheMaxEntries,
+}
+
+option RegionManager.PendingConfirmTtlEpochs
+{
+    type = integer,
+    min = 10,
+    max = 900,
+    default = 90,
+    page = RegionManager,
+    translation = RegionManager_PendingConfirmTtlEpochs,
+}
+
+option RegionManager.PendingConfirmSweepEveryEpochs
+{
+    type = integer,
+    min = 5,
+    max = 300,
+    default = 30,
+    page = RegionManager,
+    translation = RegionManager_PendingConfirmSweepEveryEpochs,
+}

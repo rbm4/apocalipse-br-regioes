@@ -33,5 +33,22 @@
     "Sandbox_Apocalipse_TSY_EnableNearScream": "Ativar grito na sua cara",
     "Sandbox_Apocalipse_TSY_EnableNearScream_tooltip": "Quando ligado, o corredor solta um grito extra assim que entra no alcance curto (grito na sua cara), além do grito de descoberta e, se a perseguição durar, o grito de perseguição. Desligar reduz o caos sonoro em combate corpo a corpo e deixa o mod mais limpo em hordas muito densas.",
     "Sandbox_Apocalipse_TSY_NearAsWorldSound": "Grito na cara em 3D (som de mundo)",
-    "Sandbox_Apocalipse_TSY_NearAsWorldSound_tooltip": "Se ativado, o grito na cara usa PlayWorldSound, igual ao grito à distância: som 3D com direção e eco do mapa, perfeito para headset 7.1. Se desligado, o grito na cara usa o áudio local do zumbi, mais seco e direto."
+    "Sandbox_Apocalipse_TSY_NearAsWorldSound_tooltip": "Se ativado, o grito na cara usa PlayWorldSound, igual ao grito à distância: som 3D com direção e eco do mapa, perfeito para headset 7.1. Se desligado, o grito na cara usa o áudio local do zumbi, mais seco e direto.",
+    "Sandbox_RegionManager": "RegionManager",
+    "Sandbox_RegionManager_DebugMode": "Ativar logs de debug",
+    "Sandbox_RegionManager_DebugMode_tooltip": "Liga/desliga os logs de depuração do RegionManager.",
+    "Sandbox_RegionManager_DecisionCacheTtlEpochs": "TTL do cache de decisões (epochs)",
+    "Sandbox_RegionManager_DecisionCacheTtlEpochs_tooltip": "Por quanto tempo uma decisão por persistentID fica na memória do cliente antes de expirar. Valores maiores reduzem roundtrips; menores limpam dados antigos mais rápido.",
+    "Sandbox_RegionManager_DecisionCacheSweepEveryEpochs": "Intervalo de varredura das decisões (epochs)",
+    "Sandbox_RegionManager_DecisionCacheSweepEveryEpochs_tooltip": "Frequência com que o cliente varre o cache de decisões para limpeza.",
+    "Sandbox_RegionManager_DecisionCacheSweepMinAgeEpochs": "Idade mínima para varrer decisões (epochs)",
+    "Sandbox_RegionManager_DecisionCacheSweepMinAgeEpochs_tooltip": "Entradas recentes, com idade menor que este valor, não entram na limpeza.",
+    "Sandbox_RegionManager_DecisionCacheCoordMaxDist": "Tolerância de coordenada da decisão (tiles)",
+    "Sandbox_RegionManager_DecisionCacheCoordMaxDist_tooltip": "Se um zumbi com o mesmo persistentID aparecer mais longe que esta distância das coordenadas em cache, a decisão é tratada como stale e descartada.",
+    "Sandbox_RegionManager_DecisionCacheMaxEntries": "Máximo de entradas no cache de decisões",
+    "Sandbox_RegionManager_DecisionCacheMaxEntries_tooltip": "Limite rígido de decisões por persistentID em cache. Se passar do limite, as entradas elegíveis mais antigas são removidas defensivamente.",
+    "Sandbox_RegionManager_PendingConfirmTtlEpochs": "TTL das confirmações pendentes (epochs)",
+    "Sandbox_RegionManager_PendingConfirmTtlEpochs_tooltip": "Por quanto tempo confirmações pendentes sem resposta são mantidas antes de serem descartadas.",
+    "Sandbox_RegionManager_PendingConfirmSweepEveryEpochs": "Intervalo de varredura das confirmações pendentes (epochs)",
+    "Sandbox_RegionManager_PendingConfirmSweepEveryEpochs_tooltip": "Frequência da limpeza de confirmações pendentes no cliente."
 }

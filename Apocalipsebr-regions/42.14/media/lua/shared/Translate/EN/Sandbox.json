@@ -33,5 +33,22 @@
     "Sandbox_Apocalipse_TSY_EnableNearScream": "Enable close-range scream",
     "Sandbox_Apocalipse_TSY_EnableNearScream_tooltip": "When enabled, the sprinter emits an extra scream when entering close range (face scream), in addition to the discovery and chase screams. Disabling it reduces audio chaos in melee combat and keeps the mod cleaner in dense hordes.",
     "Sandbox_Apocalipse_TSY_NearAsWorldSound": "Close scream as 3D world sound",
-    "Sandbox_Apocalipse_TSY_NearAsWorldSound_tooltip": "If enabled, the close scream uses PlayWorldSound just like the distant one - full 3D sound with spatial direction and echo, perfect for headsets. If disabled, it uses the zombie’s local audio, sharper and more direct."
+    "Sandbox_Apocalipse_TSY_NearAsWorldSound_tooltip": "If enabled, the close scream uses PlayWorldSound just like the distant one - full 3D sound with spatial direction and echo, perfect for headsets. If disabled, it uses the zombie’s local audio, sharper and more direct.",
+    "Sandbox_RegionManager": "RegionManager",
+    "Sandbox_RegionManager_DebugMode": "Enable debug logs",
+    "Sandbox_RegionManager_DebugMode_tooltip": "Turns RegionManager debug logging on/off.",
+    "Sandbox_RegionManager_DecisionCacheTtlEpochs": "Decision cache TTL (epochs)",
+    "Sandbox_RegionManager_DecisionCacheTtlEpochs_tooltip": "How long a persistentID decision stays in client memory before expiry. Higher values reduce server roundtrips; lower values clear stale entries faster.",
+    "Sandbox_RegionManager_DecisionCacheSweepEveryEpochs": "Decision sweep interval (epochs)",
+    "Sandbox_RegionManager_DecisionCacheSweepEveryEpochs_tooltip": "How often the client scans decision-cache entries for cleanup.",
+    "Sandbox_RegionManager_DecisionCacheSweepMinAgeEpochs": "Decision min age before sweep (epochs)",
+    "Sandbox_RegionManager_DecisionCacheSweepMinAgeEpochs_tooltip": "Recent entries newer than this are not eligible for sweep, even during cleanup passes.",
+    "Sandbox_RegionManager_DecisionCacheCoordMaxDist": "Decision coordinate tolerance (tiles)",
+    "Sandbox_RegionManager_DecisionCacheCoordMaxDist_tooltip": "If a zombie with the same persistentID appears farther than this distance from the cached decision coordinates, the cached decision is treated as stale and discarded.",
+    "Sandbox_RegionManager_DecisionCacheMaxEntries": "Decision cache max entries",
+    "Sandbox_RegionManager_DecisionCacheMaxEntries_tooltip": "Hard cap for cached persistentID decisions. If exceeded, oldest eligible entries are evicted defensively.",
+    "Sandbox_RegionManager_PendingConfirmTtlEpochs": "Pending confirmation TTL (epochs)",
+    "Sandbox_RegionManager_PendingConfirmTtlEpochs_tooltip": "How long unanswered pending confirmations are kept before being dropped.",
+    "Sandbox_RegionManager_PendingConfirmSweepEveryEpochs": "Pending confirmation sweep interval (epochs)",
+    "Sandbox_RegionManager_PendingConfirmSweepEveryEpochs_tooltip": "How often pending-confirmation cleanup runs on the client."
 }
