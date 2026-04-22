@@ -11,7 +11,41 @@ require "RegionManager_Config"
 RegionManager.ClientTick = RegionManager.ClientTick or {}
 
 local TickCounter = 0
-local TickInterval = 6 -- 2 seconds at 60 FPS
+local TickInterval = 32 -- 2 seconds at 60 FPS
+
+-- Exponential backoff for RequestAllBoundaries while zone data is still
+-- missing. Without this, every ClientTick interval (and every pending-zombie
+-- tick) would fire another sendClientCommand, flooding the server when the
+-- world is slow to respond.
+local _boundariesLastSentMs = 0
+local _boundariesBackoffMs = 1000  -- start at 1s, doubles up to 60s
+local _BOUNDARIES_MIN_MS = 1000
+local _BOUNDARIES_MAX_MS = 60000
+
+local function requestBoundariesThrottled()
+    local nowMs = (getTimestampMs and getTimestampMs()) or (getTimeInMillis and getTimeInMillis()) or 0
+    if nowMs > 0 and (nowMs - _boundariesLastSentMs) < _boundariesBackoffMs then
+        return false
+    end
+    _boundariesLastSentMs = nowMs
+    _boundariesBackoffMs = math.min(_boundariesBackoffMs * 2, _BOUNDARIES_MAX_MS)
+    sendClientCommand("RegionManager", "RequestAllBoundaries", {})
+    return true
+end
+
+-- Expose so other client files can share the same throttle state if needed.
+RegionManager.ClientTick.requestBoundariesThrottled = requestBoundariesThrottled
+
+-- Reset backoff as soon as we receive the response, so the next outage
+-- (e.g. reconnect) starts fast again.
+local function _onBoundariesReceived()
+    _boundariesBackoffMs = _BOUNDARIES_MIN_MS
+end
+Events.OnServerCommand.Add(function(module, command, args)
+    if module == "RegionManager" and command == "AllZoneBoundaries" then
+        _onBoundariesReceived()
+    end
+end)
 
 ---@type table<string, ClientZoneData>
 local PreviousZones = {} -- Track zones the player was in last check
@@ -98,21 +132,30 @@ local function checkPlayerZone(player)
 
     -- Wait until zone data is available
     if not RegionManager or not RegionManager.Client or not RegionManager.Client.zoneData then
-        sendClientCommand("RegionManager", "RequestAllBoundaries", {})
-        log("Waiting for zone data, RequestAllBoundaries sent")
+        if requestBoundariesThrottled() then
+            log("Waiting for zone data, RequestAllBoundaries sent")
+        end
         return
     end
 
     local playerX = player:getX()
     local playerY = player:getY()
 
-    -- Build current zones list
+    -- Build current zones list. Use the bucketed spatial grid when available
+    -- (built by RegionManager_Client when AllZoneBoundaries arrives) so we
+    -- only test zones whose bucket contains the player, not every registered
+    -- zone every tick.
     local currentZones = {}
-    for _, zone in ipairs(RegionManager.Client.zoneData) do
-        local bounds = zone.bounds
-        if playerX >= bounds.minX and playerX <= bounds.maxX and
-           playerY >= bounds.minY and playerY <= bounds.maxY then
-            currentZones[zone.id] = zone
+    local bucket = RegionManager.Client.getZonesAt and RegionManager.Client.getZonesAt(playerX, playerY) or nil
+    local scanList = bucket or RegionManager.Client.zoneData
+    if scanList then
+        for _, zone in ipairs(scanList) do
+            local bounds = zone.bounds
+            if bounds and
+               playerX >= bounds.minX and playerX <= bounds.maxX and
+               playerY >= bounds.minY and playerY <= bounds.maxY then
+                currentZones[zone.id] = zone
+            end
         end
     end
 

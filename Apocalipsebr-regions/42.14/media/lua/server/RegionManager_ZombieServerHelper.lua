@@ -345,6 +345,30 @@ function ZombieHelper.BuildConfirmPayload(zombieID, stored)
         r = r,
     }
 
+    -- Precomputed killBonus (non-module ladder). The client's ServerSideProperties
+    -- function skips the per-flag if-ladder when this field is present, saving
+    -- ~15 branches per zombie apply. Module zombies (those with _moduleId set)
+    -- use the module's flat override on the client and ignore this value.
+    local killBonus = 0
+    if stored.isSprinter then killBonus = killBonus + 3 end
+    if stored.isShambler then killBonus = killBonus - 3 end
+    if stored.hawkVision then killBonus = killBonus + 1 end
+    if stored.poorVision or stored.badVision then killBonus = killBonus - 1 end
+    if stored.pinpointHearing or stored.goodHearing then killBonus = killBonus + 1 end
+    if stored.poorHearing or stored.badHearing then killBonus = killBonus - 1 end
+    if stored.isTough then killBonus = killBonus + 3 end
+    if stored.isFragile then killBonus = killBonus - 1 end
+    if stored.isSuperhuman then killBonus = killBonus + 1 end
+    if stored.isWeak then killBonus = killBonus - 1 end
+    if stored.hasNavigation then killBonus = killBonus + 2 end
+    if stored.hasMemoryLong then killBonus = killBonus + 1 end
+    if stored.hasMemoryShort then killBonus = killBonus - 1 end
+    if stored.hasMemoryNone then killBonus = killBonus - 2 end
+    if stored.isResistant then killBonus = killBonus + 1 end
+    if stored.maxHits then killBonus = killBonus + math.floor(stored.maxHits * 0.5) end
+    if killBonus < 0 then killBonus = 0 end
+    payload.k = killBonus
+
     -- Protocol v3: include module ID if this zombie belongs to a registered module
     if stored._moduleId then
         payload.m = stored._moduleId

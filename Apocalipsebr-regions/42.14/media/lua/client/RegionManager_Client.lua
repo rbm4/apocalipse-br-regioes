@@ -63,6 +63,49 @@ local function OnServerCommand(module, command, args)
         log("Received " .. tostring(#RegionManager.Client.zoneData) .. " zone boundaries from server")
         log("Zone outlines will be drawn continuously via OnPostRender")
 
+        -- Build a coarse spatial grid (256x256 tile buckets) keyed by
+        -- math.floor(x/CELL), math.floor(y/CELL). Lookup callers can then
+        -- scan only the bucket containing the query point instead of walking
+        -- every zone in a linear loop every tick. Regions auto-fill the map
+        -- so the zone list can be large; this turns the inner loop in
+        -- checkPlayerZone / isInZombieAffectingZone into O(zones-in-bucket).
+        local CELL = 256
+        local grid = {}
+        for _, zone in ipairs(RegionManager.Client.zoneData) do
+            local b = zone.bounds
+            if b then
+                local minBX = math.floor(b.minX / CELL)
+                local maxBX = math.floor(b.maxX / CELL)
+                local minBY = math.floor(b.minY / CELL)
+                local maxBY = math.floor(b.maxY / CELL)
+                for bx = minBX, maxBX do
+                    for by = minBY, maxBY do
+                        local key = bx .. ":" .. by
+                        local bucket = grid[key]
+                        if not bucket then
+                            bucket = {}
+                            grid[key] = bucket
+                        end
+                        bucket[#bucket + 1] = zone
+                    end
+                end
+            end
+        end
+        RegionManager.Client.zoneGrid = grid
+        RegionManager.Client.zoneGridCellSize = CELL
+
+        --- Return the list of zones whose bounding box may contain (x, y).
+        --- Callers must still perform the precise minX/maxX test.
+        ---@param x number
+        ---@param y number
+        ---@return table|nil
+        RegionManager.Client.getZonesAt = function(x, y)
+            local g = RegionManager.Client.zoneGrid
+            if not g then return nil end
+            local key = math.floor(x / CELL) .. ":" .. math.floor(y / CELL)
+            return g[key]
+        end
+
         -- Reset client tick zone state so entry/exit events re-fire for new zones
         if RegionManager.ClientTick and RegionManager.ClientTick.resetZoneState then
             RegionManager.ClientTick.resetZoneState()

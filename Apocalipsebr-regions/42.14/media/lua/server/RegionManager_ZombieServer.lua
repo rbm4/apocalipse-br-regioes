@@ -221,6 +221,7 @@ local function Apocalipse_TSY_OnClientCommand(module, command, player, args)
     if command == "RequestZombieInfo" and player and args.zombies then
         local globalData = Apocalipse_TSY_GetGlobalModData()
         local found, notFound = 0, 0
+        local batch = {}
 
         for _, request in ipairs(args.zombies) do
             local zombieID     = request.zombieID
@@ -249,7 +250,7 @@ local function Apocalipse_TSY_OnClientCommand(module, command, player, args)
 
             if stored then
                 local payload = ZombieHelper.BuildConfirmPayload(zombieID, stored)
-                sendServerCommand(player, "Apocalipse_TSY", "ConfirmZombie", payload)
+                batch[#batch + 1] = payload
 
                 -- Set locked speed on the server-side zombie for Java relay enforcement.
                 -- The patched NetworkZombiePacker reads this modData to override relay
@@ -276,6 +277,13 @@ local function Apocalipse_TSY_OnClientCommand(module, command, player, args)
                 --     end
                 -- end
             end
+        end
+
+        -- Option B: send ALL confirmed zombies in a single batched command
+        -- instead of one sendServerCommand per zombie. The client enqueues
+        -- them onto PendingApply and drains a few per tick for smooth FPS.
+        if #batch > 0 then
+            sendServerCommand(player, "Apocalipse_TSY", "ConfirmZombieBatch", { items = batch })
         end
 
         if found > 0 or notFound > 0 then

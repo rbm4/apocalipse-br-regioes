@@ -123,6 +123,8 @@ local function registerRegion(region)
                 maxY = maxY
             }
         }
+        -- Invalidate cached client payload: contents changed.
+        RegionManager.Server._cachedBoundariesPayload = nil
 
         -- Create NonPvpZone for safe zones (pvpEnabled = false)
         -- SafetySystemManager automatically detects NonPvpZone and manages Safety state
@@ -258,6 +260,7 @@ local function registerAllRegions()
         end
     end
     RegionManager.Server.registeredZones = {}
+    RegionManager.Server._cachedBoundariesPayload = nil
     log("Cleared " .. prevCount .. " previously registered Lua zones")
 
     -- Load regions from external JSON file (creates file with defaults if missing)
@@ -358,39 +361,46 @@ local function OnClientCommand(module, command, player, args)
     end
 
     if command == "RequestAllBoundaries" then
-        local zoneList = {}
-
-        for id, data in pairs(RegionManager.Server.registeredZones or {}) do
-            print(data.properties.shamblerChance)
-            table.insert(zoneList, {
-                id = data.region.id,
-                name = data.region.name,
-                bounds = data.bounds,
-                color = data.properties.color or {
-                    r = 0,
-                    g = 255,
-                    b = 0
-                },
-                pvpEnabled = data.properties.pvpEnabled or false,
-                sprinterChance = data.properties.sprinterChance or 0,
-                shamblerChance = data.properties.shamblerChance or 0,
-                hawkVisionChance = data.properties.hawkVisionChance or 0,
-                badVisionChance = data.properties.badVisionChance or 0,
-                goodHearingChance = data.properties.goodHearingChance or 0,
-                badHearingChance = data.properties.badHearingChance or 0,
-                zombieArmorFactor = data.properties.zombieArmorFactor or 0,
-                resistantChance = data.properties.resistantChance or 0,
-                announceEntry = data.properties.announceEntry or false,
-                announceExit = data.properties.announceExit or false,
-                message = data.properties.message or ""
-            })
+        -- Build the zone list once and reuse it until the registered-zones
+        -- table mutates (registerAllRegions runs at startup, admin reloads,
+        -- etc.). Without this cache every client's RequestAllBoundaries -- and
+        -- the throttled retries that happen while zone data is in flight --
+        -- would rebuild the same table from scratch.
+        local payload = RegionManager.Server._cachedBoundariesPayload
+        if not payload then
+            local zoneList = {}
+            for id, data in pairs(RegionManager.Server.registeredZones or {}) do
+                table.insert(zoneList, {
+                    id = data.region.id,
+                    name = data.region.name,
+                    bounds = data.bounds,
+                    color = data.properties.color or {
+                        r = 0,
+                        g = 255,
+                        b = 0
+                    },
+                    pvpEnabled = data.properties.pvpEnabled or false,
+                    sprinterChance = data.properties.sprinterChance or 0,
+                    shamblerChance = data.properties.shamblerChance or 0,
+                    hawkVisionChance = data.properties.hawkVisionChance or 0,
+                    badVisionChance = data.properties.badVisionChance or 0,
+                    goodHearingChance = data.properties.goodHearingChance or 0,
+                    badHearingChance = data.properties.badHearingChance or 0,
+                    zombieArmorFactor = data.properties.zombieArmorFactor or 0,
+                    resistantChance = data.properties.resistantChance or 0,
+                    announceEntry = data.properties.announceEntry or false,
+                    announceExit = data.properties.announceExit or false,
+                    message = data.properties.message or ""
+                })
+            end
+            payload = { zones = zoneList }
+            RegionManager.Server._cachedBoundariesPayload = payload
+            print("Apocalipse_TSY: Built zone boundaries payload (" .. #zoneList .. " zones, cached)")
         end
 
-        sendServerCommand(player, "RegionManager", "AllZoneBoundaries", {
-            zones = zoneList
-        })
+        sendServerCommand(player, "RegionManager", "AllZoneBoundaries", payload)
 
-        print("Sent " .. #zoneList .. " zone boundaries to " .. player:getUsername())
+        print("Sent " .. #payload.zones .. " zone boundaries to " .. player:getUsername())
 
     elseif command == "RequestZoneInfo" then
         -- Send zone info to client

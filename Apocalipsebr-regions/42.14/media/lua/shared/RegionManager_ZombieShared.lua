@@ -596,6 +596,38 @@ local function initializeReflectionCache()
     end
 end
 
+-- Public accessor so other files can force the reflection cache to warm up
+-- BEFORE the first zombie conversion (which happens inside a hot path and
+-- would otherwise pay the Java-interop cost of 7 sandbox option lookups).
+function RegionManager.Shared.PrewarmReflectionCache()
+    local ok, err = pcall(initializeReflectionCache)
+    if not ok then
+        print("Apocalipse_TSY WARNING: Reflection prewarm failed: " .. tostring(err))
+    end
+end
+
+-- Warm the reflection cache + default-stat cache as early as possible so the
+-- first zombie batch does not stall on sandbox lookups.
+local function prewarmCaches()
+    RegionManager.Shared.PrewarmReflectionCache()
+    -- Touch each default-stat getter so the lazy cache is primed. Wrapped in
+    -- pcall because a missing sandbox option should not break boot.
+    pcall(RegionManager.Shared.getDefaultSpeed)
+    pcall(RegionManager.Shared.getDefaultSight)
+    pcall(RegionManager.Shared.getDefaultHearing)
+    pcall(RegionManager.Shared.getDefaultToughness)
+    pcall(RegionManager.Shared.getDefaultStrength)
+    pcall(RegionManager.Shared.getDefaultCognition)
+    pcall(RegionManager.Shared.getDefaultMemory)
+    pcall(RegionManager.Shared.getDefaultArmorFactor)
+    pcall(RegionManager.Shared.getDefaultMaxDefense)
+end
+if isServer() then
+    Events.OnInitWorld.Add(prewarmCaches)
+else
+    Events.OnGameBoot.Add(prewarmCaches)
+end
+
 -- Constants for zombie properties (matching BLTRandomZombies)
 local SPEED_SPRINTER = 1
 local SPEED_FAST_SHAMBLER = 2
@@ -728,7 +760,7 @@ function RegionManager.Shared.ServerSideProperties(zombie, data, sandboxOptions)
     local modData = zombie:getModData()
 
     if data.isSprinter then
-        local MAX_RETRIES = 15
+        local MAX_RETRIES = 1 --should be higher but we can't get stuck here rolling for a true sprinter
         for attempt = 1, MAX_RETRIES do
             zombie:makeInactive(true)
             zombie:makeInactive(false)
@@ -812,6 +844,15 @@ function RegionManager.Shared.ServerSideProperties(zombie, data, sandboxOptions)
             modData.Apocalipse_TSY_KillBonus = math.max(0, killBonus)
             return -- skip computed bonus
         end
+    end
+
+    -- Fast path: server pre-computed the non-module killBonus and sent it in
+    -- the payload. Skip the 15-branch if-ladder entirely.
+    if data.killBonusPrecomputed ~= nil then
+        local precomputed = data.killBonusPrecomputed
+        if precomputed < 0 then precomputed = 0 end
+        modData.Apocalipse_TSY_KillBonus = precomputed
+        return
     end
 
     if data.isSprinter then killBonus = killBonus + 3 end

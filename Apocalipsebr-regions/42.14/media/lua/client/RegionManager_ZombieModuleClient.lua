@@ -18,6 +18,16 @@ require "RegionManager_Config"
 require "RegionManager_ZombieModules"
 require "RegionManager_ZombieShared"
 
+-- Debug logging gate. Set via sandbox RegionManager.DebugMode; cached at boot
+-- so the per-tick hot paths don't pay SandboxVars lookup cost on every call.
+local DEBUG = false
+local function refreshDebugFlag()
+    if SandboxVars and SandboxVars.RegionManager and SandboxVars.RegionManager.DebugMode then
+        DEBUG = SandboxVars.RegionManager.DebugMode and true or false
+    end
+end
+Events.OnGameBoot.Add(refreshDebugFlag)
+
 RegionManager.ZombieModuleClient = RegionManager.ZombieModuleClient or {}
 
 -- Tracked module zombies: [onlineID] = { moduleDef, state... }
@@ -98,6 +108,11 @@ function RegionManager.ZombieModuleClient.initZombie(zombie, moduleId, opts)
     end
 
     trackedZombies[id] = {
+        -- zombieRef lets onTick iterate trackedZombies directly instead of
+        -- scanning the full cell zombie list every 30 ticks. The ref is
+        -- refreshed here on every initZombie call and checked for liveness
+        -- at use sites (ownership transfer, chunk unload).
+        zombieRef        = zombie,
         moduleDef        = moduleDef,
         themePlaying     = false,
         themeInstance    = nil,
@@ -107,6 +122,10 @@ function RegionManager.ZombieModuleClient.initZombie(zombie, moduleId, opts)
         -- Convergence hints: self-heal outfit/toughness if they drift
         expectedOutfit    = opts and opts.expectedOutfit or nil,
         expectedToughness = opts and opts.expectedToughness or nil,
+        -- Cached smash target (window or door). Invalidated after each smash
+        -- attempt so we only pay the instanceof() storm once per hit.
+        cachedSmashWindow = nil,
+        cachedSmashDoor   = nil,
     }
 end
 
@@ -368,7 +387,7 @@ local function onZombieUpdate(zombie)
     if data.expectedOutfit then
         local curOutfit = zombie:getOutfitName()
         if curOutfit ~= data.expectedOutfit then
-            if not data._outfitFixLogged then
+            if DEBUG and not data._outfitFixLogged then
                 print("[ZMC-Converge] z=" .. tostring(id) ..
                       " outfit mismatch: got='" .. tostring(curOutfit) ..
                       "' expected='" .. tostring(data.expectedOutfit) .. "', fixing")
@@ -399,7 +418,7 @@ local function onZombieUpdate(zombie)
                 needsFix = true
             end
             if needsFix then
-                if not data._toughFixLogged then
+                if DEBUG and not data._toughFixLogged then
                     print("[ZMC-Converge] z=" .. tostring(id) ..
                           " toughness mismatch: type=" .. tostring(curType) ..
                           " maxHits=" .. tostring(curMax) ..
@@ -515,37 +534,30 @@ end
 
 -- ============================================================================
 -- Tick counter + periodic outfit enforcement
--- OnZombieUpdate doesn't fire every frame, so we enforce outfit on a fixed
--- schedule by scanning all tracked zombies from the cell zombie list.
+-- We iterate the trackedZombies map directly instead of scanning the full
+-- cell zombie list, so cost is O(tracked) not O(cell zombies). Dead/nil
+-- refs are also pruned here.
 -- ============================================================================
 
-local OUTFIT_ENFORCE_INTERVAL = 30  -- ~0.5 seconds at 60 FPS
+local OUTFIT_ENFORCE_INTERVAL = 60  -- ~0.5 seconds at 60 FPS
 
 local function onTick()
     tickCounter = tickCounter + 1
     tickFadingThemes()
 
-    -- Periodic outfit enforcement for tracked module zombies
-    if tickCounter % OUTFIT_ENFORCE_INTERVAL == 0 then
-        local player = getPlayer()
-        if not player then return end
-        local cell = player:getCell()
-        if not cell then return end
-        local zombieList = cell:getZombieList()
-        if not zombieList then return end
+    if tickCounter % OUTFIT_ENFORCE_INTERVAL ~= 0 then
+        return
+    end
 
-        for i = 0, zombieList:size() - 1 do
-            local zombie = zombieList:get(i)
-            if zombie and not zombie:isDead() then
-                local pid = RegionManager.Shared.GetReliablePID(zombie)
-                local data = trackedZombies[pid]
-                if data and data.expectedOutfit then
-                    local curOutfit = zombie:getOutfitName()
-                    if curOutfit ~= data.expectedOutfit then
-                        zombie:dressInNamedOutfit(data.expectedOutfit)
-                        zombie:resetModelNextFrame()
-                    end
-                end
+    for pid, data in pairs(trackedZombies) do
+        local zombie = data.zombieRef
+        if not zombie or zombie:isDead() then
+            trackedZombies[pid] = nil
+        elseif data.expectedOutfit then
+            local curOutfit = zombie:getOutfitName()
+            if curOutfit ~= data.expectedOutfit then
+                zombie:dressInNamedOutfit(data.expectedOutfit)
+                zombie:resetModelNextFrame()
             end
         end
     end
