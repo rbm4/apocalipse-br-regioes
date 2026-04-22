@@ -336,6 +336,52 @@ local function Apocalipse_TSY_ProcessPending()
 
     local proposals = {}
 
+    -- Snapshot zone boundary list for O(zones) lookups per zombie.
+    -- We only want to send RequestZombieInfo for zombies standing inside a
+    -- zone whose properties actually affect zombies. Regions always cover
+    -- the whole map (auto-fill), so a pure bounds test is not enough -- we
+    -- need to check that at least one zombie-affecting chance property is
+    -- non-zero in the overlapping zone(s).
+    local zoneList = (RegionManager and RegionManager.Client and RegionManager.Client.zoneData) or nil
+    local hasZones = zoneList and #zoneList > 0
+
+    --- Return true if the zone's broadcast payload exposes any non-zero
+    --- zombie-affecting property. Mirrors the fields serialised server-side
+    --- in the "AllZoneBoundaries" handler.
+    ---@param zone table
+    ---@return boolean
+    local function zoneAffectsZombies(zone)
+        if not zone then return false end
+        if (zone.sprinterChance   or 0) > 0 then return true end
+        if (zone.shamblerChance   or 0) > 0 then return true end
+        if (zone.hawkVisionChance or 0) > 0 then return true end
+        if (zone.badVisionChance  or 0) > 0 then return true end
+        if (zone.goodHearingChance or 0) > 0 then return true end
+        if (zone.badHearingChance or 0) > 0 then return true end
+        if (zone.resistantChance  or 0) > 0 then return true end
+        return false
+    end
+
+    --- Return true if (x,y) is inside at least one zone that has any
+    --- zombie-affecting property set. Falls back to true when no zone data
+    --- is loaded yet so startup doesn't silently drop real spawns.
+    ---@param zx number
+    ---@param zy number
+    ---@return boolean
+    local function isInZombieAffectingZone(zx, zy)
+        if not hasZones then return true end
+        for i = 1, #zoneList do
+            local zone = zoneList[i]
+            local b = zone and zone.bounds
+            if b and zx >= b.minX and zx <= b.maxX and zy >= b.minY and zy <= b.maxY then
+                if zoneAffectsZombies(zone) then
+                    return true
+                end
+            end
+        end
+        return false
+    end
+
     -- Iterate backwards for safe removal during iteration
     for i = PendingZombies.count, 1, -1 do
         local zombie = PendingZombies.queue[i]
@@ -360,38 +406,58 @@ local function Apocalipse_TSY_ProcessPending()
                     data.Apocalipse_TSY_Processed = true
 
                     local persistentID = RegionManager.Shared.GetZombiePersistentID(zombie)
-
-                    table.insert(proposals, {
-                        zombieID = onlineID,
-                        persistentID = persistentID,
-                        x = zombie:getX(),
-                        y = zombie:getY(),
-                        outfitName = zombie:getOutfitName(),
-                    })
-
-                    -- Store in PendingConfirmations for O(1) lookup on ConfirmZombie
                     local zx, zy = zombie:getX(), zombie:getY()
-                    local existing = PendingConfirmations[persistentID]
-                    if existing then
-                        -- Same persistentID: if >500 tiles away, old entry is stale (recycled zombie)
-                        local dx = existing.x - zx
-                        local dy = existing.y - zy
-                        if (dx * dx + dy * dy) > 250000 then -- 500^2
-                            PendingIDIndex[existing.onlineID] = nil
-                        end
-                    end
-                    PendingConfirmations[persistentID] = {
-                        zombieRef = zombie,
-                        x = zx,
-                        y = zy,
-                        onlineID = onlineID,
-                    }
-                    PendingIDIndex[onlineID] = persistentID
 
-                    -- Remove from queue (swap with last)
-                    PendingZombies.queue[i] = PendingZombies.queue[PendingZombies.count]
-                    PendingZombies.queue[PendingZombies.count] = nil
-                    PendingZombies.count = PendingZombies.count - 1
+                    -- Clear any stale trackedZombies entry inherited from a
+                    -- previous zombie that reused this persistent ID (e.g.
+                    -- onlineID recycling, chunk reload). initZombie below (or
+                    -- a later ConfirmZombie) will re-register if appropriate.
+                    if RegionManager.ZombieModuleClient
+                       and RegionManager.ZombieModuleClient.clearTrackedByPID then
+                        RegionManager.ZombieModuleClient.clearTrackedByPID(persistentID)
+                    end
+
+                    -- Skip server request entirely when the zombie is not
+                    -- inside a zone that carries any zombie-affecting
+                    -- property. Regions auto-fill the whole map, so a bare
+                    -- bounds hit is expected; we only care about zones that
+                    -- would actually change this zombie's stats.
+                    if not isInZombieAffectingZone(zx, zy) then
+                        PendingZombies.queue[i] = PendingZombies.queue[PendingZombies.count]
+                        PendingZombies.queue[PendingZombies.count] = nil
+                        PendingZombies.count = PendingZombies.count - 1
+                    else
+                        table.insert(proposals, {
+                            zombieID = onlineID,
+                            persistentID = persistentID,
+                            x = zx,
+                            y = zy,
+                            outfitName = zombie:getOutfitName(),
+                        })
+
+                        -- Store in PendingConfirmations for O(1) lookup on ConfirmZombie
+                        local existing = PendingConfirmations[persistentID]
+                        if existing then
+                            -- Same persistentID: if >500 tiles away, old entry is stale (recycled zombie)
+                            local dx = existing.x - zx
+                            local dy = existing.y - zy
+                            if (dx * dx + dy * dy) > 250000 then -- 500^2
+                                PendingIDIndex[existing.onlineID] = nil
+                            end
+                        end
+                        PendingConfirmations[persistentID] = {
+                            zombieRef = zombie,
+                            x = zx,
+                            y = zy,
+                            onlineID = onlineID,
+                        }
+                        PendingIDIndex[onlineID] = persistentID
+
+                        -- Remove from queue (swap with last)
+                        PendingZombies.queue[i] = PendingZombies.queue[PendingZombies.count]
+                        PendingZombies.queue[PendingZombies.count] = nil
+                        PendingZombies.count = PendingZombies.count - 1
+                    end
                 end
             end
             -- else: onlineID < 0 means server hasn't assigned it yet - keep in queue

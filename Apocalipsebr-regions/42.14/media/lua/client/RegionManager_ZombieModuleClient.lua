@@ -110,6 +110,18 @@ function RegionManager.ZombieModuleClient.initZombie(zombie, moduleId, opts)
     }
 end
 
+--- Remove a tracked entry by reliable PID.
+--- Called when a zombie is (re)spawned on the client to discard any stale
+--- tracking from a previous zombie that shared the same persistent ID (e.g.
+--- recycled onlineID, chunk reload). Safe no-op when no entry exists.
+---@param pid string|nil
+function RegionManager.ZombieModuleClient.clearTrackedByPID(pid)
+    if not pid then return end
+    if trackedZombies[pid] then
+        trackedZombies[pid] = nil
+    end
+end
+
 -- ============================================================================
 -- Sound helpers
 -- ============================================================================
