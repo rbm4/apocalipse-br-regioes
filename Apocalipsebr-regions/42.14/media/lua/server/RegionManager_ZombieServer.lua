@@ -180,14 +180,13 @@ local function Apocalipse_TSY_OnClientCommand(module, command, player, args)
             if not stored.toughnessHitCounter then stored.toughnessHitCounter = 0 end
             local maxHits = stored.maxHits or RegionManager.Shared.DEFAULT_MAX_HITS
 
-            local isExhausted = false
-            if stored.toughnessHitCounter < maxHits then
-                stored.toughnessHitCounter = stored.toughnessHitCounter + 1
+            stored.toughnessHitCounter = math.min(stored.toughnessHitCounter + 1, maxHits)
+            local isExhausted = stored.toughnessHitCounter >= maxHits
+            if isExhausted then
+                print("Apocalipse_TSY Server: Tough zombie pid=" .. tostring(persistentID) .. " exhausted all lives")
+            else
                 print("Apocalipse_TSY Server: Tough zombie pid=" .. tostring(persistentID) .. " hit (" ..
                       stored.toughnessHitCounter .. "/" .. maxHits .. ")")
-            else
-                isExhausted = true
-                print("Apocalipse_TSY Server: Tough zombie pid=" .. tostring(persistentID) .. " exhausted all lives")
             end
 
             ZombieHelper.BroadcastToAll("Apocalipse_TSY", "ToughZombieHit", {
@@ -199,6 +198,11 @@ local function Apocalipse_TSY_OnClientCommand(module, command, player, args)
                 y            = y,
                 isExhausted  = isExhausted,
             })
+            if isExhausted then
+                print("Apocalipse_TSY Server: Broadcast ToughZombieHit exhausted pid=" .. tostring(persistentID)
+                      .. " onlineID=" .. tostring(zombieID) .. " (" .. tostring(stored.toughnessHitCounter)
+                      .. "/" .. tostring(maxHits) .. ")")
+            end
         else
             -- No stored data - broadcast exhausted so client stops mitigating
             print("Apocalipse_TSY Server: ZombieHitTough no match for pid=" ..

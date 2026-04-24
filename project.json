@@ -6,9 +6,9 @@
     ],
     "workshop": {
         "id":3706462687,
-        "visibility": "unlisted",
+        "visibility": "public",
         "tags": [
-            "Build 42"
+            "Build 42","Framework", "Multiplayer"
         ],
         "excludes": []
     },

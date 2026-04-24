@@ -519,20 +519,7 @@ local function Apocalipse_TSY_OnServerCommand(module, command, args)
         local isExhausted = args.isExhausted
         local zombieX = args.x
         local zombieY = args.y
-
-        local player = getPlayer()
-        if not player then
-            return
-        end
-        local playerX = player:getX()
-        local playerY = player:getY()
-
-        -- Check distance between player and zombie
-        local distance = math.sqrt((playerX - zombieX) ^ 2 + (playerY - zombieY) ^ 2)
-        if distance > 200 then
-            return
-        end
-        RegionManager.Shared.ApplyToughZombieHit(zombieID, persistentID, hitCounter, maxHits, isExhausted)
+        RegionManager.Shared.ApplyToughZombieHit(zombieID, persistentID, hitCounter, maxHits, isExhausted, zombieX, zombieY)
         return
     end
 
