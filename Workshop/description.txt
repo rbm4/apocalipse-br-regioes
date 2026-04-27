@@ -41,7 +41,6 @@ Based on SIMBAproduz's "theySEE YOU", enhanced and integrated:
 [*] Sprinters scream on discovery, close-up, and during chases
 [*] 62 unique voice files - no repetition
 [*] Screams attract nearby zombies (horde pull)
-[*] Anti-spam: cluster cooldown prevents scream stacking
 [*] Configurable via sandbox options (chances, volumes, ranges, cooldowns)
 [/list]
 
@@ -49,6 +48,37 @@ Based on SIMBAproduz's "theySEE YOU", enhanced and integrated:
 [list]
 [*] Custom lunge and movement animations for sprinters
 [*] 5 sprint variants with multiplayer sync
+[/list]
+
+[hr][/hr]
+
+[h2]How To Add Regions (Admin Panel)[/h2]
+This mod includes an in-game map picker so server admins can create regions without editing code.
+
+[h3]Step-by-step[/h3]
+[list]
+[*] Join your server with an admin account.
+[*] Right click anywhere in the ground to open the context menu, open the Regions Admin Panel and choose Create New Region.
+[*] In the map picker, click the map to set Point 1 (first corner), then click again to set Point 2 (second corner).
+[*] Fill in the form (name, flags, zombie properties, maxHits, and optional message).
+[*] Click Submit to create the region.
+[*] Use the admin region list to review, test, and teleport to your new region.
+[/list]
+
+[h3]Configuration Tips[/h3]
+[list]
+[*] Start simple: set Name + PVP Zone first, then tune zombie stats in small increments.
+[*] Percent values are chances (0-100) per property and are evaluated using one random roll.
+[*] If conflicting chances are both 100% (for example 100% sprinters and 100% shamblers), the first matching rule in evaluation order will always win.
+[*] maxHits applies only when a zombie rolls as Tough; it defines extra hits absorbed before the zombie starts taking normal damage.
+[*] Keep entry/exit announcements enabled while testing so players can confirm region boundaries.
+[/list]
+
+[h3]Recommended Workflow For Live Servers[/h3]
+[list]
+[*] Create the region in a low-population period.
+[*] Teleport to edges and verify boundaries before announcing it to players.
+[*] Apply one gameplay change at a time (PVP, then speed, then senses, etc.) and monitor results.
 [/list]
 
 [hr][/hr]
