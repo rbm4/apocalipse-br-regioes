@@ -1,4 +1,11 @@
 {
+    "UI_Region_Manager_Panel": "リージョン管理",
+    "UI_Region_Manager_Teleport": "テレポート",
+    "UI_Region_Manager_Refresh": "更新",
+    "UI_Region_Manager_New_Region": "新しいリージョン",
+    "UI_Region_Manager_Edit_Region": "リージョンを編集",
+    "UI_Region_Manager_Close": "閉じる",
+    "UI_Regions_Panel": "リージョンパネル",
     "UI_RMMP_Title": "新しい地域の作成 - マップピッカー",
     "UI_RMMP_StatusPickFirst": "地図上をクリックして、その地域の最初の角を選択します。",
     "UI_RMMP_StatusPickSecond": "地図上をクリックして、その地域の 2 番目の角を選択します。",
@@ -58,9 +65,11 @@
     "UI_RMMP_LblMessage": "メッセージ",
     "UI_RMMP_BtnReset": "選択をリセット",
     "UI_RMMP_BtnSubmit": "提出する",
+    "UI_RMMP_BtnBack": "戻る",
     "UI_RMMP_BtnCancel": "キャンセル",
     "UI_RMMP_SaySelectBoth": "まず地図上の両方の角を選択してください。",
     "UI_RMMP_SayEnterName": "地域名を入力してください！",
     "UI_RMMP_SayEnterId": "リージョンIDを入力してください！",
-    "UI_RMMP_SaySubmitting": "新しいリージョンを送信中: %s..."
+    "UI_RMMP_SaySubmitting": "新しいリージョンを送信中: %s...",
+    "UI_RMMP_BtnDelete": "削除"
 }

@@ -1,4 +1,11 @@
-﻿{
+{
+    "UI_Region_Manager_Panel": "Region Manager",
+    "UI_Region_Manager_Teleport": "Teleport",
+    "UI_Region_Manager_Refresh": "Refresh",
+    "UI_Region_Manager_New_Region": "New Region",
+    "UI_Region_Manager_Edit_Region": "Edit Region",
+    "UI_Region_Manager_Close": "Close",
+    "UI_Regions_Panel": "Regions Panel",
     "UI_RMMP_Title": "Create New Region - Map Picker",
     "UI_RMMP_StatusPickFirst": "Click on the map to select the FIRST corner of the region.",
     "UI_RMMP_StatusPickSecond": "Click on the map to select the SECOND corner of the region.",
@@ -58,9 +65,11 @@
     "UI_RMMP_LblMessage": "Message",
     "UI_RMMP_BtnReset": "Reset Selection",
     "UI_RMMP_BtnSubmit": "Submit",
+    "UI_RMMP_BtnBack": "Back",
     "UI_RMMP_BtnCancel": "Cancel",
     "UI_RMMP_SaySelectBoth": "Select both corners on the map first!",
     "UI_RMMP_SayEnterName": "Enter a region name!",
     "UI_RMMP_SayEnterId": "Enter a region ID!",
-    "UI_RMMP_SaySubmitting": "Submitting new region: %s..."
+    "UI_RMMP_SaySubmitting": "Submitting new region: %s...",
+    "UI_RMMP_BtnDelete": "Delete"
 }

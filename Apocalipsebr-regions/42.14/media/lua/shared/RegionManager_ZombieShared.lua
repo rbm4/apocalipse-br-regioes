@@ -577,7 +577,6 @@ local toughnessConfigOption = nil
 local strengthConfigOption = nil
 local memoryConfigOption = nil
 
-
 -- Initialize field and config option references (call once)
 local function initializeReflectionCache()
     if not speedConfigOption then
@@ -760,7 +759,7 @@ function RegionManager.Shared.ServerSideProperties(zombie, data, sandboxOptions)
     local modData = zombie:getModData()
 
     if data.isSprinter then
-        local MAX_RETRIES = 1 --should be higher but we can't get stuck here rolling for a true sprinter
+        local MAX_RETRIES = 1 -- should be higher but we can't get stuck here rolling for a true sprinter
         for attempt = 1, MAX_RETRIES do
             zombie:makeInactive(true)
             zombie:makeInactive(false)
@@ -850,27 +849,61 @@ function RegionManager.Shared.ServerSideProperties(zombie, data, sandboxOptions)
     -- the payload. Skip the 15-branch if-ladder entirely.
     if data.killBonusPrecomputed ~= nil then
         local precomputed = data.killBonusPrecomputed
-        if precomputed < 0 then precomputed = 0 end
+        if precomputed < 0 then
+            precomputed = 0
+        end
         modData.Apocalipse_TSY_KillBonus = precomputed
         return
     end
 
-    if data.isSprinter then killBonus = killBonus + 3 end
-    if data.isShambler then killBonus = killBonus - 3 end
-    if data.hawkVision then killBonus = killBonus + 1 end
-    if data.poorVision or data.badVision then killBonus = killBonus - 1 end
-    if data.pinpointHearing or data.goodHearing then killBonus = killBonus + 1 end
-    if data.poorHearing or data.badHearing then killBonus = killBonus - 1 end
-    if data.isTough then killBonus = killBonus + 3 end
-    if data.isFragile then killBonus = killBonus - 1 end
-    if data.isSuperhuman then killBonus = killBonus + 1 end
-    if data.isWeak then killBonus = killBonus - 1 end
-    if data.hasNavigation then killBonus = killBonus + 2 end
-    if data.hasMemoryLong then killBonus = killBonus + 1 end
-    if data.hasMemoryShort then killBonus = killBonus - 1 end
-    if data.hasMemoryNone then killBonus = killBonus - 2 end
-    if data.isResistant then killBonus = killBonus + 1 end
-    if data.maxHits then killBonus = killBonus + math.floor(data.maxHits * 0.5) end
+    if data.isSprinter then
+        killBonus = killBonus + 3
+    end
+    if data.isShambler then
+        killBonus = killBonus - 3
+    end
+    if data.hawkVision then
+        killBonus = killBonus + 1
+    end
+    if data.poorVision or data.badVision then
+        killBonus = killBonus - 1
+    end
+    if data.pinpointHearing or data.goodHearing then
+        killBonus = killBonus + 1
+    end
+    if data.poorHearing or data.badHearing then
+        killBonus = killBonus - 1
+    end
+    if data.isTough then
+        killBonus = killBonus + 3
+    end
+    if data.isFragile then
+        killBonus = killBonus - 1
+    end
+    if data.isSuperhuman then
+        killBonus = killBonus + 1
+    end
+    if data.isWeak then
+        killBonus = killBonus - 1
+    end
+    if data.hasNavigation then
+        killBonus = killBonus + 2
+    end
+    if data.hasMemoryLong then
+        killBonus = killBonus + 1
+    end
+    if data.hasMemoryShort then
+        killBonus = killBonus - 1
+    end
+    if data.hasMemoryNone then
+        killBonus = killBonus - 2
+    end
+    if data.isResistant then
+        killBonus = killBonus + 1
+    end
+    if data.maxHits then
+        killBonus = killBonus + math.floor(data.maxHits * 0.5)
+    end
     modData.Apocalipse_TSY_KillBonus = math.max(0, killBonus)
 end
 
@@ -904,7 +937,6 @@ function RegionManager.Shared.RevalidateZombieSpeed(zombie, sandboxOptions)
         return false -- not a zombie we modified, skip
     end
 
-    
     -- Read the current walkType from the animation variable
     local walkType = zombie:getVariableString("zombiewalktype")
     if not walkType then
@@ -919,8 +951,8 @@ function RegionManager.Shared.RevalidateZombieSpeed(zombie, sandboxOptions)
         end
         -- Mismatch: zombie should be sprinting but isn't
         RegionManager.Shared.makeSprint(zombie, sandboxOptions)
-        print("Apocalipse_TSY: Revalidated sprinter zombie " .. tostring(zombie:getOnlineID())
-              .. " (walkType was '" .. walkType .. "')")
+        print("Apocalipse_TSY: Revalidated sprinter zombie " .. tostring(zombie:getOnlineID()) .. " (walkType was '" ..
+                  walkType .. "')")
         return true
 
     elseif expected == "shambler" then
@@ -935,8 +967,8 @@ function RegionManager.Shared.RevalidateZombieSpeed(zombie, sandboxOptions)
         end
         -- Mismatch: zombie is sprinting but should be shambling
         RegionManager.Shared.makeShamble(zombie, sandboxOptions)
-        print("Apocalipse_TSY: Revalidated shambler zombie " .. tostring(zombie:getOnlineID())
-              .. " (walkType was '" .. walkType .. "')")
+        print("Apocalipse_TSY: Revalidated shambler zombie " .. tostring(zombie:getOnlineID()) .. " (walkType was '" ..
+                  walkType .. "')")
         return true
     end
 
@@ -963,36 +995,36 @@ function RegionManager.Shared.DecodePayload(payloadStr, zombieID, maxHits)
     end
 
     return {
-        zombieID           = zombieID,
-        isSprinter         = hasBit(0),
-        isShambler         = hasBit(1),
-        hawkVision         = hasBit(2),
-        badVision          = hasBit(3),
-        normalVision       = hasBit(4),
-        poorVision         = hasBit(5),
-        randomVision       = hasBit(6),
-        goodHearing        = hasBit(7),
-        badHearing         = hasBit(8),
-        pinpointHearing    = hasBit(9),
-        normalHearing      = hasBit(10),
-        poorHearing        = hasBit(11),
-        randomHearing      = hasBit(12),
-        isResistant        = hasBit(13),
-        isTough            = hasBit(14),
-        isNormalToughness  = hasBit(15),
-        isFragile          = hasBit(16),
-        isRandomToughness  = hasBit(17),
-        isSuperhuman       = hasBit(18),
+        zombieID = zombieID,
+        isSprinter = hasBit(0),
+        isShambler = hasBit(1),
+        hawkVision = hasBit(2),
+        badVision = hasBit(3),
+        normalVision = hasBit(4),
+        poorVision = hasBit(5),
+        randomVision = hasBit(6),
+        goodHearing = hasBit(7),
+        badHearing = hasBit(8),
+        pinpointHearing = hasBit(9),
+        normalHearing = hasBit(10),
+        poorHearing = hasBit(11),
+        randomHearing = hasBit(12),
+        isResistant = hasBit(13),
+        isTough = hasBit(14),
+        isNormalToughness = hasBit(15),
+        isFragile = hasBit(16),
+        isRandomToughness = hasBit(17),
+        isSuperhuman = hasBit(18),
         isNormalToughness2 = hasBit(19),
-        isWeak             = hasBit(20),
+        isWeak = hasBit(20),
         isRandomToughness2 = hasBit(21),
-        hasNavigation      = hasBit(22),
-        hasMemoryLong      = hasBit(23),
-        hasMemoryNormal    = hasBit(24),
-        hasMemoryShort     = hasBit(25),
-        hasMemoryNone      = hasBit(26),
-        hasMemoryRandom    = hasBit(27),
-        maxHits            = maxHits,
+        hasNavigation = hasBit(22),
+        hasMemoryLong = hasBit(23),
+        hasMemoryNormal = hasBit(24),
+        hasMemoryShort = hasBit(25),
+        hasMemoryNone = hasBit(26),
+        hasMemoryRandom = hasBit(27),
+        maxHits = maxHits
     }
 end
 
@@ -1010,6 +1042,23 @@ local TOUGH_HIT_REF_TTL_SEC = 15
 local TOUGH_HIT_MATCH_MAX_DIST = 10
 local TOUGH_HIT_EXHAUST_FALLBACK_MAX_DIST = 20
 
+local function forceResistedHitStance(zombie)
+    zombie:setKnockedDown(false)
+    zombie:setStaggerBack(true)
+    pcall(function()
+        zombie:setOnFloor(false)
+    end)
+    pcall(function()
+        zombie:setFallOnFront(false)
+    end)
+    pcall(function()
+        zombie:setHitReaction("")
+    end)
+    pcall(function()
+        zombie:setSitAgainstWall(false)
+    end)
+end
+
 local function applyToughHitState(zombie, persistentID, hitCounter, maxHits, isExhausted)
     local modData = zombie:getModData()
 
@@ -1020,9 +1069,9 @@ local function applyToughHitState(zombie, persistentID, hitCounter, maxHits, isE
     if not isExhausted then
         -- Still has lives: make immune to this hit + stagger
         zombie:setAvoidDamage(true)
-        zombie:setKnockedDown(false)
-        zombie:setStaggerBack(true)
-        print("Apocalipse_TSY: Tough zombie pid=" .. tostring(persistentID) .. " resisted hit (" .. hitCounter .. "/" .. maxHits .. ")")
+        forceResistedHitStance(zombie)
+        print("Apocalipse_TSY: Tough zombie pid=" .. tostring(persistentID) .. " resisted hit (" .. hitCounter .. "/" ..
+                  maxHits .. ")")
     else
         -- All lives used up: fully disengage the toughness system.
         -- Clear the type so OnWeaponHitCharacter stops intercepting hits
@@ -1050,7 +1099,8 @@ end
 ---@param isExhausted boolean True if zombie has used all its extra lives
 ---@param zombieX number|nil Broadcast X of the hit zombie
 ---@param zombieY number|nil Broadcast Y of the hit zombie
-function RegionManager.Shared.ApplyToughZombieHit(zombieID, persistentID, hitCounter, maxHits, isExhausted, zombieX, zombieY)
+function RegionManager.Shared.ApplyToughZombieHit(zombieID, persistentID, hitCounter, maxHits, isExhausted, zombieX,
+    zombieY)
     local now = os.time()
     sweepPendingToughHitRefs(now)
 
@@ -1059,7 +1109,8 @@ function RegionManager.Shared.ApplyToughZombieHit(zombieID, persistentID, hitCou
         local pending = ToughHitPendingRef[persistentID]
         if pending and pending.expiresAt and pending.expiresAt > now then
             local cachedZombie = pending.zombie
-            if cachedZombie and not cachedZombie:isDead() and RegionManager.Shared.GetReliablePID(cachedZombie) == persistentID then
+            if cachedZombie and not cachedZombie:isDead() and RegionManager.Shared.GetReliablePID(cachedZombie) ==
+                persistentID then
                 ToughHitPendingRef[persistentID] = nil
                 applyToughHitState(cachedZombie, persistentID, hitCounter, maxHits, isExhausted)
                 return
@@ -1141,8 +1192,7 @@ function RegionManager.Shared.ApplyToughZombieHit(zombieID, persistentID, hitCou
                         distSq = dx * dx + dy * dy
                     end
 
-                    if (not zombieX or not zombieY or distSq <= maxDistSq)
-                        and (not bestDistSq or distSq < bestDistSq) then
+                    if (not zombieX or not zombieY or distSq <= maxDistSq) and (not bestDistSq or distSq < bestDistSq) then
                         bestZombie = zombie
                         bestDistSq = distSq
                     end
@@ -1152,14 +1202,15 @@ function RegionManager.Shared.ApplyToughZombieHit(zombieID, persistentID, hitCou
 
         if bestZombie then
             applyToughHitState(bestZombie, persistentID, hitCounter, maxHits, true)
-            print("Apocalipse_TSY: Defensive exhausted fallback applied for pid="
-                  .. tostring(persistentID) .. " onlineID=" .. tostring(zombieID))
+            print("Apocalipse_TSY: Defensive exhausted fallback applied for pid=" .. tostring(persistentID) ..
+                      " onlineID=" .. tostring(zombieID))
             return
         end
     end
 
-    print("Apocalipse_TSY: Tough hit apply failed pid=" .. tostring(persistentID)
-          .. " onlineID=" .. tostring(zombieID) .. " exhausted=" .. tostring(isExhausted))
+    print(
+        "Apocalipse_TSY: Tough hit apply failed pid=" .. tostring(persistentID) .. " onlineID=" .. tostring(zombieID) ..
+            " exhausted=" .. tostring(isExhausted))
 end
 
 -- CLIENT-SIDE: Detect weapon hit on tough zombie then notify server
@@ -1191,8 +1242,7 @@ local function OnWeaponHitCharacter(attacker, target, weapon, damage)
         -- Optimistic local application: immediately protect the zombie on this client
         -- The server will send the authoritative state back shortly
         target:setAvoidDamage(true)
-        target:setKnockedDown(false)
-        target:setStaggerBack(true)
+        forceResistedHitStance(target)
 
         -- Send to server for authoritative processing
         sendClientCommand(player, "Apocalipse_TSY", "ZombieHitTough", {
@@ -1205,10 +1255,10 @@ local function OnWeaponHitCharacter(attacker, target, weapon, damage)
         if targetPID then
             ToughHitPendingRef[targetPID] = {
                 zombie = target,
-                expiresAt = os.time() + TOUGH_HIT_REF_TTL_SEC,
+                expiresAt = os.time() + TOUGH_HIT_REF_TTL_SEC
             }
         end
-    elseif target:avoidDamage() then 
+    elseif target:avoidDamage() then
         target:setAvoidDamage(false)
     end
 end
@@ -1218,5 +1268,4 @@ if not isServer() then
     Events.OnWeaponHitCharacter.Add(OnWeaponHitCharacter)
     print("Apocalipse_TSY: Networked toughness system initialized (OnWeaponHitCharacter)")
 end
-
 

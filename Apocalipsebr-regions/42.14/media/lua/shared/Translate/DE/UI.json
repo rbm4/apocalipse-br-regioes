@@ -1,4 +1,11 @@
 {
+    "UI_Region_Manager_Panel": "Regionsverwaltung",
+    "UI_Region_Manager_Teleport": "Teleportieren",
+    "UI_Region_Manager_Refresh": "Aktualisieren",
+    "UI_Region_Manager_New_Region": "Neue Region",
+    "UI_Region_Manager_Edit_Region": "Region bearbeiten",
+    "UI_Region_Manager_Close": "Schliessen",
+    "UI_Regions_Panel": "Regionenfenster",
     "UI_RMMP_Title": "Neue Region erstellen – Kartenauswahl",
     "UI_RMMP_StatusPickFirst": "Klicken Sie auf die Karte, um die ERSTE Ecke der Region auszuwählen.",
     "UI_RMMP_StatusPickSecond": "Klicken Sie auf die Karte, um die ZWEITE Ecke der Region auszuwählen.",
@@ -58,9 +65,11 @@
     "UI_RMMP_LblMessage": "Nachricht",
     "UI_RMMP_BtnReset": "Auswahl zurücksetzen",
     "UI_RMMP_BtnSubmit": "Einreichen",
+    "UI_RMMP_BtnBack": "Zurück",
     "UI_RMMP_BtnCancel": "Stornieren",
     "UI_RMMP_SaySelectBoth": "Wählen Sie zuerst beide Ecken auf der Karte aus!",
     "UI_RMMP_SayEnterName": "Geben Sie einen Regionsnamen ein!",
     "UI_RMMP_SayEnterId": "Geben Sie eine Regions-ID ein!",
-    "UI_RMMP_SaySubmitting": "Neue Region wird eingereicht: %s..."
+    "UI_RMMP_SaySubmitting": "Neue Region wird eingereicht: %s...",
+    "UI_RMMP_BtnDelete": "Loeschen"
 }

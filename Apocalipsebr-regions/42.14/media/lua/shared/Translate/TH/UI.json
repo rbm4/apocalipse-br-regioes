@@ -1,4 +1,11 @@
 {
+    "UI_Region_Manager_Panel": "ตัวจัดการภูมิภาค",
+    "UI_Region_Manager_Teleport": "เทเลพอร์ต",
+    "UI_Region_Manager_Refresh": "รีเฟรช",
+    "UI_Region_Manager_New_Region": "ภูมิภาคใหม่",
+    "UI_Region_Manager_Edit_Region": "แก้ไขภูมิภาค",
+    "UI_Region_Manager_Close": "ปิด",
+    "UI_Regions_Panel": "แผงภูมิภาค",
     "UI_RMMP_Title": "สร้างภูมิภาคใหม่ - เครื่องมือเลือกแผนที่",
     "UI_RMMP_StatusPickFirst": "คลิกบนแผนที่เพื่อเลือกมุมแรกของภูมิภาค",
     "UI_RMMP_StatusPickSecond": "คลิกบนแผนที่เพื่อเลือกมุมที่สองของภูมิภาค",
@@ -58,9 +65,11 @@
     "UI_RMMP_LblMessage": "ข้อความ",
     "UI_RMMP_BtnReset": "รีเซ็ตการเลือก",
     "UI_RMMP_BtnSubmit": "ส่ง",
+    "UI_RMMP_BtnBack": "กลับ",
     "UI_RMMP_BtnCancel": "ยกเลิก",
     "UI_RMMP_SaySelectBoth": "เลือกทั้งสองมุมบนแผนที่ก่อน!",
     "UI_RMMP_SayEnterName": "ป้อนชื่อภูมิภาค!",
     "UI_RMMP_SayEnterId": "ป้อนรหัสภูมิภาค!",
-    "UI_RMMP_SaySubmitting": "กำลังส่งภูมิภาคใหม่: %s..."
+    "UI_RMMP_SaySubmitting": "กำลังส่งภูมิภาคใหม่: %s...",
+    "UI_RMMP_BtnDelete": "ลบ"
 }

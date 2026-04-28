@@ -1,4 +1,11 @@
 {
+    "UI_Region_Manager_Panel": "Regionsstyring",
+    "UI_Region_Manager_Teleport": "Teleporter",
+    "UI_Region_Manager_Refresh": "Opdater",
+    "UI_Region_Manager_New_Region": "Ny region",
+    "UI_Region_Manager_Edit_Region": "Rediger region",
+    "UI_Region_Manager_Close": "Luk",
+    "UI_Regions_Panel": "Regionspanel",
     "UI_RMMP_Title": "Opret ny region - Kortvælger",
     "UI_RMMP_StatusPickFirst": "Klik på kortet for at vælge det FØRSTE hjørne af regionen.",
     "UI_RMMP_StatusPickSecond": "Klik på kortet for at vælge det ANDET hjørne af regionen.",
@@ -58,9 +65,11 @@
     "UI_RMMP_LblMessage": "Besked",
     "UI_RMMP_BtnReset": "Nulstil valg",
     "UI_RMMP_BtnSubmit": "Indsend",
+    "UI_RMMP_BtnBack": "Tilbage",
     "UI_RMMP_BtnCancel": "Ophæve",
     "UI_RMMP_SaySelectBoth": "Vælg først begge hjørner på kortet!",
     "UI_RMMP_SayEnterName": "Indtast et områdenavn!",
     "UI_RMMP_SayEnterId": "Indtast et regions-id!",
-    "UI_RMMP_SaySubmitting": "Indsender nyt område: %s..."
+    "UI_RMMP_SaySubmitting": "Indsender nyt område: %s...",
+    "UI_RMMP_BtnDelete": "Slet"
 }

@@ -1,4 +1,11 @@
 {
+    "UI_Region_Manager_Panel": "Regiokezelo",
+    "UI_Region_Manager_Teleport": "Teleportalas",
+    "UI_Region_Manager_Refresh": "Frissites",
+    "UI_Region_Manager_New_Region": "Uj regio",
+    "UI_Region_Manager_Edit_Region": "Regio szerkesztese",
+    "UI_Region_Manager_Close": "Bezaras",
+    "UI_Regions_Panel": "Regiopanel",
     "UI_RMMP_Title": "Új régió létrehozása – Térképválasztó",
     "UI_RMMP_StatusPickFirst": "Kattintson a térképre a régió ELSŐ sarkának kiválasztásához.",
     "UI_RMMP_StatusPickSecond": "Kattintson a térképre a régió MÁSODIK sarkának kiválasztásához.",
@@ -58,9 +65,11 @@
     "UI_RMMP_LblMessage": "Üzenet",
     "UI_RMMP_BtnReset": "Kiválasztás visszaállítása",
     "UI_RMMP_BtnSubmit": "Beküld",
+    "UI_RMMP_BtnBack": "Vissza",
     "UI_RMMP_BtnCancel": "Mégse",
     "UI_RMMP_SaySelectBoth": "Először válassza ki mindkét sarkot a térképen!",
     "UI_RMMP_SayEnterName": "Adja meg a régió nevét!",
     "UI_RMMP_SayEnterId": "Adjon meg egy régióazonosítót!",
-    "UI_RMMP_SaySubmitting": "Új régió beküldése: %s..."
+    "UI_RMMP_SaySubmitting": "Új régió beküldése: %s...",
+    "UI_RMMP_BtnDelete": "Torles"
 }

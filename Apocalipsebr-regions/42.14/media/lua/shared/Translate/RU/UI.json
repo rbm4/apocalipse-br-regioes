@@ -1,4 +1,11 @@
 {
+    "UI_Region_Manager_Panel": "Менеджер регионов",
+    "UI_Region_Manager_Teleport": "Телепорт",
+    "UI_Region_Manager_Refresh": "Обновить",
+    "UI_Region_Manager_New_Region": "Новый регион",
+    "UI_Region_Manager_Edit_Region": "Редактировать регион",
+    "UI_Region_Manager_Close": "Закрыть",
+    "UI_Regions_Panel": "Панель регионов",
     "UI_RMMP_Title": "Создать новый регион — выбор карты",
     "UI_RMMP_StatusPickFirst": "Нажмите на карту, чтобы выбрать ПЕРВЫЙ угол региона.",
     "UI_RMMP_StatusPickSecond": "Нажмите на карту, чтобы выбрать ВТОРОЙ угол региона.",
@@ -58,9 +65,11 @@
     "UI_RMMP_LblMessage": "Сообщение",
     "UI_RMMP_BtnReset": "Сбросить выбор",
     "UI_RMMP_BtnSubmit": "Представлять на рассмотрение",
+    "UI_RMMP_BtnBack": "Назад",
     "UI_RMMP_BtnCancel": "Отмена",
     "UI_RMMP_SaySelectBoth": "Сначала выберите оба угла на карте!",
     "UI_RMMP_SayEnterName": "Введите название региона!",
     "UI_RMMP_SayEnterId": "Введите идентификатор региона!",
-    "UI_RMMP_SaySubmitting": "Отправляем новый регион: %s..."
+    "UI_RMMP_SaySubmitting": "Отправляем новый регион: %s...",
+    "UI_RMMP_BtnDelete": "Удалить"
 }

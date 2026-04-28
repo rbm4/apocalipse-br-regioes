@@ -9,7 +9,6 @@
 -- module ID (args.m in the ConfirmZombie payload). This file does NOT scan
 -- all zombies - it only operates on explicitly initialized zombies.
 -- ============================================================================
-
 if isServer() then
     return
 end
@@ -40,18 +39,13 @@ local tickCounter = 0
 -- Each entry: { emitter, instance, volume }
 -- ============================================================================
 local fadingThemes = {}
-local FADE_DURATION_TICKS = 180  -- ~3 seconds at 60 FPS
+local FADE_DURATION_TICKS = 180 -- ~3 seconds at 60 FPS
 local FADE_STEP = 1.0 / FADE_DURATION_TICKS
 
 -- ============================================================================
 -- Vanilla sound names to suppress when a module requests it
 -- ============================================================================
-local VANILLA_VOICE_SOUNDS = {
-    "ZombieVoiceSprinting",
-    "ZombieVoice",
-    "MaleZombieVoice",
-    "FemaleZombieVoice",
-}
+local VANILLA_VOICE_SOUNDS = {"ZombieVoiceSprinting", "ZombieVoice", "MaleZombieVoice", "FemaleZombieVoice"}
 
 -- ============================================================================
 -- Public API: called from RegionManager_ZombieClient on ConfirmZombie
@@ -64,14 +58,22 @@ local VANILLA_VOICE_SOUNDS = {
 ---@param moduleDef table
 ---@return boolean
 local function outfitMatchesModule(zombie, moduleDef)
-    if not moduleDef or not moduleDef.outfitNames then return false end
+    if not moduleDef or not moduleDef.outfitNames then
+        return false
+    end
     -- Force-flagged zombies always match their assigned module
     local modData = zombie:getModData()
-    if modData.Apocalipse_TSY_ForceModuleId == moduleDef.id then return true end
+    if modData.Apocalipse_TSY_ForceModuleId == moduleDef.id then
+        return true
+    end
     local outfit = zombie:getOutfitName()
-    if not outfit then return false end
+    if not outfit then
+        return false
+    end
     for _, name in ipairs(moduleDef.outfitNames) do
-        if outfit == name then return true end
+        if outfit == name then
+            return true
+        end
     end
     return false
 end
@@ -81,7 +83,9 @@ end
 ---@param moduleId string  The module ID from the server payload (args.m)
 ---@param opts table|nil   Optional convergence hints: { expectedOutfit, expectedToughness }
 function RegionManager.ZombieModuleClient.initZombie(zombie, moduleId, opts)
-    if not zombie or not moduleId then return end
+    if not zombie or not moduleId then
+        return
+    end
 
     local moduleDef = RegionManager.ZombieModules.getById(moduleId)
     if not moduleDef then
@@ -91,9 +95,8 @@ function RegionManager.ZombieModuleClient.initZombie(zombie, moduleId, opts)
 
     -- Only track zombies whose outfit actually matches the module definition
     if not outfitMatchesModule(zombie, moduleDef) then
-        print("RegionManager.ZombieModuleClient: Zombie outfit '" ..
-              tostring(zombie:getOutfitName()) .. "' does not match module '" ..
-              moduleId .. "', skipping")
+        print("RegionManager.ZombieModuleClient: Zombie outfit '" .. tostring(zombie:getOutfitName()) ..
+                  "' does not match module '" .. moduleId .. "', skipping")
         return
     end
 
@@ -103,7 +106,9 @@ function RegionManager.ZombieModuleClient.initZombie(zombie, moduleId, opts)
     local periodicState = {}
     if moduleDef.sounds and moduleDef.sounds.periodic then
         for idx, _ in ipairs(moduleDef.sounds.periodic) do
-            periodicState[idx] = { lastTick = tickCounter }
+            periodicState[idx] = {
+                lastTick = tickCounter
+            }
         end
     end
 
@@ -112,20 +117,20 @@ function RegionManager.ZombieModuleClient.initZombie(zombie, moduleId, opts)
         -- scanning the full cell zombie list every 30 ticks. The ref is
         -- refreshed here on every initZombie call and checked for liveness
         -- at use sites (ownership transfer, chunk unload).
-        zombieRef        = zombie,
-        moduleDef        = moduleDef,
-        themePlaying     = false,
-        themeInstance    = nil,
-        detectPlayed     = false,
-        periodicState    = periodicState,
+        zombieRef = zombie,
+        moduleDef = moduleDef,
+        themePlaying = false,
+        themeInstance = nil,
+        detectPlayed = false,
+        periodicState = periodicState,
         lastRedirectTick = 0,
         -- Convergence hints: self-heal outfit/toughness if they drift
-        expectedOutfit    = opts and opts.expectedOutfit or nil,
+        expectedOutfit = opts and opts.expectedOutfit or nil,
         expectedToughness = opts and opts.expectedToughness or nil,
         -- Cached smash target (window or door). Invalidated after each smash
         -- attempt so we only pay the instanceof() storm once per hit.
         cachedSmashWindow = nil,
-        cachedSmashDoor   = nil,
+        cachedSmashDoor = nil
     }
 end
 
@@ -135,7 +140,9 @@ end
 --- recycled onlineID, chunk reload). Safe no-op when no entry exists.
 ---@param pid string|nil
 function RegionManager.ZombieModuleClient.clearTrackedByPID(pid)
-    if not pid then return end
+    if not pid then
+        return
+    end
     if trackedZombies[pid] then
         trackedZombies[pid] = nil
     end
@@ -147,7 +154,9 @@ end
 
 local function suppressVanillaSounds(zombie)
     local emitter = zombie:getEmitter()
-    if not emitter then return end
+    if not emitter then
+        return
+    end
     for _, soundName in ipairs(VANILLA_VOICE_SOUNDS) do
         if emitter:isPlaying(soundName) then
             emitter:stopSoundByName(soundName)
@@ -156,9 +165,13 @@ local function suppressVanillaSounds(zombie)
 end
 
 local function startTheme(zombie, data)
-    if data.themePlaying then return end
+    if data.themePlaying then
+        return
+    end
     local sounds = data.moduleDef.sounds
-    if not sounds or not sounds.theme then return end
+    if not sounds or not sounds.theme then
+        return
+    end
 
     local emitter = zombie:getEmitter()
     if emitter then
@@ -172,13 +185,15 @@ end
 --- The emitter + instance are moved to the fadingThemes list so the fade
 --- continues even after the zombie dies or goes out of range.
 local function beginThemeFadeOut(zombie, data)
-    if not data.themePlaying then return end
+    if not data.themePlaying then
+        return
+    end
     -- Move to fading list
     if data.themeEmitter and data.themeInstance then
         table.insert(fadingThemes, {
-            emitter  = data.themeEmitter,
+            emitter = data.themeEmitter,
             instance = data.themeInstance,
-            volume   = 1.0,
+            volume = 1.0
         })
     end
     data.themePlaying = false
@@ -213,9 +228,13 @@ local function tickFadingThemes()
 end
 
 local function playDetectSound(zombie, data)
-    if data.detectPlayed then return end
+    if data.detectPlayed then
+        return
+    end
     local sounds = data.moduleDef.sounds
-    if not sounds or not sounds.onDetect then return end
+    if not sounds or not sounds.onDetect then
+        return
+    end
 
     local sq = zombie:getSquare()
     if sq then
@@ -226,10 +245,14 @@ end
 
 local function playPeriodicSounds(zombie, data)
     local sounds = data.moduleDef.sounds
-    if not sounds or not sounds.periodic then return end
+    if not sounds or not sounds.periodic then
+        return
+    end
 
     local sq = zombie:getSquare()
-    if not sq then return end
+    if not sq then
+        return
+    end
 
     for idx, def in ipairs(sounds.periodic) do
         local state = data.periodicState[idx]
@@ -245,10 +268,14 @@ end
 
 local function playHitSounds(zombie, moduleDef)
     local sounds = moduleDef.sounds
-    if not sounds or not sounds.onHit then return end
+    if not sounds or not sounds.onHit then
+        return
+    end
 
     local sq = zombie:getSquare()
-    if not sq then return end
+    if not sq then
+        return
+    end
 
     for _, def in ipairs(sounds.onHit) do
         if ZombRand(100) < def.chance then
@@ -279,7 +306,9 @@ end
 ---@param window IsoWindow
 ---@param damagePer number  Damage per smash tick
 local function smashWindow(zombie, window, damagePer)
-    if not window then return end
+    if not window then
+        return
+    end
     -- Destroy barricade first, then the window itself
     local barricade = window:getBarricadeForCharacter(zombie)
     if barricade then
@@ -299,7 +328,9 @@ end
 ---@param door IsoThumpable|IsoDoor
 ---@param damagePer number  Damage per smash tick
 local function smashDoor(zombie, door, damagePer)
-    if not door then return end
+    if not door then
+        return
+    end
     -- If the door is openable (unlocked), just open it
     if instanceof(door, "IsoDoor") then
         if not door:isLocked() and not door:isBarricaded() then
@@ -321,13 +352,17 @@ end
 ---@return IsoWindow|nil, IsoThumpable|IsoDoor|nil
 local function findAdjacentObstacle(zombie)
     local sq = zombie:getSquare()
-    if not sq then return nil, nil end
+    if not sq then
+        return nil, nil
+    end
 
     -- Check objects on the zombie's square and immediate neighbours
-    local squares = { sq }
+    local squares = {sq}
     for dir = 0, 3 do
         local adj = sq:getAdjacentSquare(dir)
-        if adj then squares[#squares + 1] = adj end
+        if adj then
+            squares[#squares + 1] = adj
+        end
     end
 
     for _, checkSq in ipairs(squares) do
@@ -339,8 +374,7 @@ local function findAdjacentObstacle(zombie)
                     if instanceof(obj, "IsoWindow") then
                         return obj, nil
                     end
-                    if instanceof(obj, "IsoDoor") or
-                       (instanceof(obj, "IsoThumpable") and obj:isDoor()) then
+                    if instanceof(obj, "IsoDoor") or (instanceof(obj, "IsoThumpable") and obj:isDoor()) then
                         return nil, obj
                     end
                 end
@@ -355,11 +389,15 @@ end
 -- ============================================================================
 
 local function onZombieUpdate(zombie)
-    if not zombie then return end
+    if not zombie then
+        return
+    end
 
     local id = RegionManager.Shared.GetReliablePID(zombie)
     local data = trackedZombies[id]
-    if not data then return end
+    if not data then
+        return
+    end
 
     -- Dead zombie: fade out theme and clean up
     if zombie:isDead() then
@@ -388,9 +426,8 @@ local function onZombieUpdate(zombie)
         local curOutfit = zombie:getOutfitName()
         if curOutfit ~= data.expectedOutfit then
             if DEBUG and not data._outfitFixLogged then
-                print("[ZMC-Converge] z=" .. tostring(id) ..
-                      " outfit mismatch: got='" .. tostring(curOutfit) ..
-                      "' expected='" .. tostring(data.expectedOutfit) .. "', fixing")
+                print("[ZMC-Converge] z=" .. tostring(id) .. " outfit mismatch: got='" .. tostring(curOutfit) ..
+                          "' expected='" .. tostring(data.expectedOutfit) .. "', fixing")
                 data._outfitFixLogged = true
             end
             zombie:dressInNamedOutfit(data.expectedOutfit)
@@ -419,11 +456,9 @@ local function onZombieUpdate(zombie)
             end
             if needsFix then
                 if DEBUG and not data._toughFixLogged then
-                    print("[ZMC-Converge] z=" .. tostring(id) ..
-                          " toughness mismatch: type=" .. tostring(curType) ..
-                          " maxHits=" .. tostring(curMax) ..
-                          " expected=" .. tostring(expected.type) ..
-                          "/" .. tostring(expected.maxHits) .. ", fixing")
+                    print("[ZMC-Converge] z=" .. tostring(id) .. " toughness mismatch: type=" .. tostring(curType) ..
+                              " maxHits=" .. tostring(curMax) .. " expected=" .. tostring(expected.type) .. "/" ..
+                              tostring(expected.maxHits) .. ", fixing")
                     data._toughFixLogged = true
                 end
                 modData.Apocalipse_TSY_ToughnessType = expected.type
@@ -439,7 +474,9 @@ local function onZombieUpdate(zombie)
     end
 
     local player = getPlayer()
-    if not player or player:isDead() then return end
+    if not player or player:isDead() then
+        return
+    end
 
     local distSq = getDistSq(zombie, player)
     local detectionSq = detectionRange * detectionRange
@@ -488,18 +525,52 @@ local function onZombieUpdate(zombie)
         -- through it and re-redirect to the player.
         if behavior.smashObstacles then
             local smashCooldown = behavior.smashCooldownTicks or 60
-            if not data.lastSmashTick then data.lastSmashTick = 0 end
+            if not data.lastSmashTick then
+                data.lastSmashTick = 0
+            end
             if (tickCounter - data.lastSmashTick) >= smashCooldown then
-                local target = zombie:getTarget()
-                -- If zombie is targeting something that isn't a player,
-                -- check for adjacent obstacles.
+                -- Vanilla tracks door/window banging via thumpTarget, not
+                -- via getTarget(). A zombie can keep targeting the player
+                -- while simultaneously thumping an obstacle in the way.
                 local isStuck = false
-                if target then
-                    isStuck = not instanceof(target, "IsoPlayer")
+                local thumpTarget = nil
+                local ok, result = pcall(function()
+                    return zombie:getThumpTarget()
+                end)
+                if ok then
+                    thumpTarget = result
+                end
+                if thumpTarget then
+                    isStuck = true
+                else
+                    local window, door = findAdjacentObstacle(zombie)
+                    isStuck = window ~= nil or door ~= nil
                 end
                 if isStuck then
                     local dmg = behavior.smashDamage or 100
-                    local window, door = findAdjacentObstacle(zombie)
+                    local window = nil
+                    local door = nil
+                    if thumpTarget then
+                        if instanceof(thumpTarget, "IsoWindow") then
+                            window = thumpTarget
+                        elseif instanceof(thumpTarget, "IsoDoor") or instanceof(thumpTarget, "IsoThumpable") then
+                            door = thumpTarget
+                        else
+                            local okThumpable, thumpable = pcall(function()
+                                return thumpTarget:getThumpableFor(zombie)
+                            end)
+                            if okThumpable and thumpable then
+                                if instanceof(thumpable, "IsoWindow") then
+                                    window = thumpable
+                                else
+                                    door = thumpable
+                                end
+                            end
+                        end
+                    end
+                    if not window and not door then
+                        window, door = findAdjacentObstacle(zombie)
+                    end
                     if window then
                         smashWindow(zombie, window, dmg)
                         data.lastSmashTick = tickCounter
@@ -522,12 +593,18 @@ end
 
 local function onWeaponHitCharacter(attacker, target, weapon, damage)
     local player = getPlayer()
-    if not player or attacker ~= player then return end
-    if not instanceof(target, "IsoZombie") or not target:isAlive() then return end
+    if not player or attacker ~= player then
+        return
+    end
+    if not instanceof(target, "IsoZombie") or not target:isAlive() then
+        return
+    end
 
     local id = RegionManager.Shared.GetReliablePID(target)
     local data = trackedZombies[id]
-    if not data then return end
+    if not data then
+        return
+    end
 
     playHitSounds(target, data.moduleDef)
 end
@@ -539,7 +616,7 @@ end
 -- refs are also pruned here.
 -- ============================================================================
 
-local OUTFIT_ENFORCE_INTERVAL = 60  -- ~0.5 seconds at 60 FPS
+local OUTFIT_ENFORCE_INTERVAL = 60 -- ~0.5 seconds at 60 FPS
 
 local function onTick()
     tickCounter = tickCounter + 1

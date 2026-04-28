@@ -12,8 +12,9 @@ Region management for Project Zomboid Build 42 multiplayer servers. Create zones
 [*] Zone types: PVP, Sprinters, Shamblers, Safe Zone, Loot Bonus, Dead Zone, Custom
 [*] Auto-generated safe zones fill the entire map - no gaps
 [*] Overlapping zones merge smartly
-[*] Edit zones via JSON config file - no code needed
-[*] Admin panel for viewing and teleporting to regions
+[*] Edit zones via JSON config file or admin Panel - no code needed
+[*] Admin panel for editing, creating and teleporting to regions
+[*] Players can see the regions through the admin panel but they can't edit or create regions
 [/list]
 
 [h3]PVP Zones[/h3]

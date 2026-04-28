@@ -1,4 +1,11 @@
 {
+    "UI_Region_Manager_Panel": "Regiobeheer",
+    "UI_Region_Manager_Teleport": "Teleporteren",
+    "UI_Region_Manager_Refresh": "Vernieuwen",
+    "UI_Region_Manager_New_Region": "Nieuwe regio",
+    "UI_Region_Manager_Edit_Region": "Regio bewerken",
+    "UI_Region_Manager_Close": "Sluiten",
+    "UI_Regions_Panel": "Regiopaneel",
     "UI_RMMP_Title": "Nieuwe regio maken - Kaartkiezer",
     "UI_RMMP_StatusPickFirst": "Klik op de kaart om de EERSTE hoek van de regio te selecteren.",
     "UI_RMMP_StatusPickSecond": "Klik op de kaart om de TWEEDE hoek van de regio te selecteren.",
@@ -58,9 +65,11 @@
     "UI_RMMP_LblMessage": "Bericht",
     "UI_RMMP_BtnReset": "Selectie opnieuw instellen",
     "UI_RMMP_BtnSubmit": "Indienen",
+    "UI_RMMP_BtnBack": "Terug",
     "UI_RMMP_BtnCancel": "Annuleren",
     "UI_RMMP_SaySelectBoth": "Selecteer eerst beide hoeken op de kaart!",
     "UI_RMMP_SayEnterName": "Voer een regionaam in!",
     "UI_RMMP_SayEnterId": "Voer een regio-ID in!",
-    "UI_RMMP_SaySubmitting": "Nieuwe regio indienen: %s..."
+    "UI_RMMP_SaySubmitting": "Nieuwe regio indienen: %s...",
+    "UI_RMMP_BtnDelete": "Verwijderen"
 }

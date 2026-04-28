@@ -1,4 +1,11 @@
 {
+    "UI_Region_Manager_Panel": "Менеджер регіонів",
+    "UI_Region_Manager_Teleport": "Телепорт",
+    "UI_Region_Manager_Refresh": "Оновити",
+    "UI_Region_Manager_New_Region": "Новий регіон",
+    "UI_Region_Manager_Edit_Region": "Редагувати регіон",
+    "UI_Region_Manager_Close": "Закрити",
+    "UI_Regions_Panel": "Панель регіонів",
     "UI_RMMP_Title": "Створити новий регіон - засіб вибору карти",
     "UI_RMMP_StatusPickFirst": "Клацніть на карті, щоб вибрати ПЕРШИЙ кут регіону.",
     "UI_RMMP_StatusPickSecond": "Клацніть на карті, щоб вибрати ДРУГИЙ кут регіону.",
@@ -58,9 +65,11 @@
     "UI_RMMP_LblMessage": "повідомлення",
     "UI_RMMP_BtnReset": "Скинути вибір",
     "UI_RMMP_BtnSubmit": "Надіслати",
+    "UI_RMMP_BtnBack": "Назад",
     "UI_RMMP_BtnCancel": "Скасувати",
     "UI_RMMP_SaySelectBoth": "Спочатку виберіть обидва кути на карті!",
     "UI_RMMP_SayEnterName": "Введіть назву регіону!",
     "UI_RMMP_SayEnterId": "Введіть ідентифікатор регіону!",
-    "UI_RMMP_SaySubmitting": "Подання нового регіону: %s..."
+    "UI_RMMP_SaySubmitting": "Подання нового регіону: %s...",
+    "UI_RMMP_BtnDelete": "Видалити"
 }

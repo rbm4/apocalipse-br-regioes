@@ -1,4 +1,11 @@
 {
+    "UI_Region_Manager_Panel": "Gestionnaire de regions",
+    "UI_Region_Manager_Teleport": "Teleporter",
+    "UI_Region_Manager_Refresh": "Actualiser",
+    "UI_Region_Manager_New_Region": "Nouvelle region",
+    "UI_Region_Manager_Edit_Region": "Modifier la region",
+    "UI_Region_Manager_Close": "Fermer",
+    "UI_Regions_Panel": "Panneau des regions",
     "UI_RMMP_Title": "Créer une nouvelle région – Sélecteur de carte",
     "UI_RMMP_StatusPickFirst": "Cliquez sur la carte pour sélectionner le PREMIER coin de la région.",
     "UI_RMMP_StatusPickSecond": "Cliquez sur la carte pour sélectionner le DEUXIÈME coin de la région.",
@@ -58,9 +65,11 @@
     "UI_RMMP_LblMessage": "Texte du message",
     "UI_RMMP_BtnReset": "Réinitialiser la sélection",
     "UI_RMMP_BtnSubmit": "Soumettre",
+    "UI_RMMP_BtnBack": "Retour",
     "UI_RMMP_BtnCancel": "Annuler",
     "UI_RMMP_SaySelectBoth": "Sélectionnez d'abord les deux coins de la carte !",
     "UI_RMMP_SayEnterName": "Entrez un nom de région !",
     "UI_RMMP_SayEnterId": "Entrez un identifiant de région !",
-    "UI_RMMP_SaySubmitting": "Soumission d'une nouvelle région : %s..."
+    "UI_RMMP_SaySubmitting": "Soumission d'une nouvelle région : %s...",
+    "UI_RMMP_BtnDelete": "Supprimer"
 }

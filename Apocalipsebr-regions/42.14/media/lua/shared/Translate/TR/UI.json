@@ -1,4 +1,11 @@
 {
+    "UI_Region_Manager_Panel": "Bolge yonetimi",
+    "UI_Region_Manager_Teleport": "Isinlan",
+    "UI_Region_Manager_Refresh": "Yenile",
+    "UI_Region_Manager_New_Region": "Yeni bolge",
+    "UI_Region_Manager_Edit_Region": "Bolgeyi duzenle",
+    "UI_Region_Manager_Close": "Kapat",
+    "UI_Regions_Panel": "Bolgeler paneli",
     "UI_RMMP_Title": "Yeni Bölge Oluştur - Harita Seçici",
     "UI_RMMP_StatusPickFirst": "Bölgenin İLK köşesini seçmek için haritaya tıklayın.",
     "UI_RMMP_StatusPickSecond": "Bölgenin İKİNCİ köşesini seçmek için haritaya tıklayın.",
@@ -58,9 +65,11 @@
     "UI_RMMP_LblMessage": "Mesaj",
     "UI_RMMP_BtnReset": "Seçimi Sıfırla",
     "UI_RMMP_BtnSubmit": "Göndermek",
+    "UI_RMMP_BtnBack": "Geri",
     "UI_RMMP_BtnCancel": "İptal etmek",
     "UI_RMMP_SaySelectBoth": "Önce haritada her iki köşeyi de seçin!",
     "UI_RMMP_SayEnterName": "Bir bölge adı girin!",
     "UI_RMMP_SayEnterId": "Bir bölge kimliği girin!",
-    "UI_RMMP_SaySubmitting": "Yeni bölge gönderiliyor: %s..."
+    "UI_RMMP_SaySubmitting": "Yeni bölge gönderiliyor: %s...",
+    "UI_RMMP_BtnDelete": "Sil"
 }

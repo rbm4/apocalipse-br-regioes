@@ -60,7 +60,11 @@ function ISRegionMapPicker:createChildren()
     local labelW = 100
 
     -- Title
-    self.titleLabel = ISLabel:new(pad, pad, FONT_HGT_MEDIUM, T("Title"), 1, 1, 1, 1, UIFont.Medium, true)
+    local panelTitle = T("Title")
+    if self.isEditMode then
+        panelTitle = "Edit Region - Map Picker"
+    end
+    self.titleLabel = ISLabel:new(pad, pad, FONT_HGT_MEDIUM, panelTitle, 1, 1, 1, 1, UIFont.Medium, true)
     self.titleLabel:initialise()
     self:addChild(self.titleLabel)
 
@@ -182,9 +186,18 @@ function ISRegionMapPicker:createChildren()
 
     addSpacer(2)
     addSection(T("SecFlags"))
-    self.boolTickBox = ISTickBox:new(formPad, rowY, entryW, FONT_HGT_SMALL * 3 + 12, "", nil, nil)
+    local flagOptionCount = 3
+    local flagRowHgt = math.max(fieldHgt + 6, FONT_HGT_SMALL + 14)
+    local flagBoxPadding = 8
+    local flagBoxHeight = flagOptionCount * flagRowHgt + flagBoxPadding
+    self.boolTickBox = ISTickBox:new(formPad, rowY, entryW, flagBoxHeight, "", nil, nil)
     self.boolTickBox:initialise()
     self.boolTickBox:instantiate()
+    self.boolTickBox:setFont(UIFont.Small)
+    self.boolTickBox.itemHgt = flagRowHgt
+    self.boolTickBox.itemGap = 2
+    self.boolTickBox.textGap = 8
+    self.boolTickBox.boxSize = math.max(FONT_HGT_SMALL + 6, 16)
     self.boolTickBox.choicesColor = {
         r = 1,
         g = 1,
@@ -195,7 +208,7 @@ function ISRegionMapPicker:createChildren()
     self.boolTickBox:addOption(T("FlagAnnounceEntry"))
     self.boolTickBox:addOption(T("FlagAnnounceExit"))
     self.formPanel:addChild(self.boolTickBox)
-    rowY = rowY + (FONT_HGT_SMALL * 3 + 12) + 8
+    rowY = rowY + flagBoxHeight + 12
 
     addSection(T("SecSpeed"))
     self.sprinterEntry = addNumericField(T("LblSprinter"))
@@ -256,8 +269,9 @@ function ISRegionMapPicker:createChildren()
     }
     self:addChild(self.resetBtn)
 
-    self.submitBtn = ISButton:new(pad + btnWid + pad, btnY, btnWid, btnHgt, T("BtnSubmit"), self,
-        ISRegionMapPicker.onSubmit)
+    local submitText = self.isEditMode and "Save Changes" or T("BtnSubmit")
+    self.submitBtn =
+        ISButton:new(pad + btnWid + pad, btnY, btnWid, btnHgt, submitText, self, ISRegionMapPicker.onSubmit)
     self.submitBtn:initialise()
     self.submitBtn:instantiate()
     self.submitBtn.borderColor = {
@@ -280,10 +294,96 @@ function ISRegionMapPicker:createChildren()
     }
     self:addChild(self.cancelBtn)
 
+    self.backBtn = ISButton:new(self.width - (btnWid + pad) * 2, btnY, btnWid, btnHgt, T("BtnBack"), self,
+        ISRegionMapPicker.onBack)
+    self.backBtn:initialise()
+    self.backBtn:instantiate()
+    self.backBtn.borderColor = {
+        r = 1,
+        g = 0.7,
+        b = 0.1,
+        a = 0.7
+    }
+    self:addChild(self.backBtn)
+
+    if self.isEditMode then
+        self.deleteBtn = ISButton:new(self.width - (btnWid + pad) * 3, btnY, btnWid, btnHgt, T("BtnDelete"), self,
+            ISRegionMapPicker.onDelete)
+        self.deleteBtn:initialise()
+        self.deleteBtn:instantiate()
+        self.deleteBtn.borderColor = {
+            r = 1,
+            g = 0.2,
+            b = 0.2,
+            a = 0.8
+        }
+        self:addChild(self.deleteBtn)
+    end
+
     -- ========== Initialize state ==========
     self.selectionState = STATE_PICK_FIRST
     self.point1 = nil -- {x, y}
     self.point2 = nil -- {x, y}
+
+    if self.isEditMode and self.editRegion then
+        local r = self.editRegion
+        self.nameEntry:setText(r.name or "")
+        self.idEntry:setText(r.id or "")
+
+        self.point1 = {
+            x = r.x1 or 0,
+            y = r.y1 or 0
+        }
+        self.point2 = {
+            x = r.x2 or 0,
+            y = r.y2 or 0
+        }
+        self.selectionState = STATE_READY
+        self.statusLabel:setName(T("StatusReady"))
+        self.statusLabel.r = 0.3
+        self.statusLabel.g = 1
+        self.statusLabel.b = 0.3
+
+        local props = r.customProperties or {}
+        self.boolTickBox:setSelected(1, props.pvpEnabled == true)
+        self.boolTickBox:setSelected(2, props.announceEntry == true)
+        self.boolTickBox:setSelected(3, props.announceExit == true)
+
+        local function setNum(entry, value)
+            if entry then
+                entry:setText(tostring(tonumber(value) or 0))
+            end
+        end
+
+        setNum(self.sprinterEntry, props.sprinterChance)
+        setNum(self.shamblerEntry, props.shamblerChance)
+        setNum(self.hawkVisionEntry, props.hawkVisionChance)
+        setNum(self.badVisionEntry, props.badVisionChance)
+        setNum(self.normalVisionEntry, props.normalVisionChance)
+        setNum(self.poorVisionEntry, props.poorVisionChance)
+        setNum(self.randomVisionEntry, props.randomVisionChance)
+        setNum(self.goodHearEntry, props.goodHearingChance)
+        setNum(self.badHearEntry, props.badHearingChance)
+        setNum(self.pinpointHearingEntry, props.pinpointHearingChance)
+        setNum(self.normalHearingEntry, props.normalHearingChance)
+        setNum(self.poorHearingEntry, props.poorHearingChance)
+        setNum(self.randomHearingEntry, props.randomHearingChance)
+        setNum(self.resistEntry, props.resistantChance)
+        setNum(self.toughnessEntry, props.toughnessChance)
+        setNum(self.normalToughnessEntry, props.normalToughnessChance)
+        setNum(self.fragileEntry, props.fragileChance)
+        setNum(self.randomToughnessEntry, props.randomToughnessChance)
+        setNum(self.superhumanEntry, props.superhumanChance)
+        setNum(self.weakEntry, props.weakChance)
+        setNum(self.navigationEntry, props.navigationChance)
+        setNum(self.memoryLongEntry, props.memoryLongChance)
+        setNum(self.memoryNormalEntry, props.memoryNormalChance)
+        setNum(self.memoryShortEntry, props.memoryShortChance)
+        setNum(self.memoryNoneEntry, props.memoryNoneChance)
+        setNum(self.memoryRandomEntry, props.memoryRandomChance)
+        setNum(self.maxHitsEntry, props.maxHits)
+        self.messageEntry:setText(props.message or "")
+    end
 
     -- Fit map bounds to the viewport on open so users start with a usable view.
     self:resetMapViewToFit()
@@ -536,14 +636,14 @@ function ISRegionMapPicker:render()
         local api3 = self.worldMap:getAPIv1()
         local mwx = api3:mouseToWorldX()
         local mwy = api3:mouseToWorldY()
-        local coordText = string.format(T("CoordMouse"), math.floor(mwx), math.floor(mwy))
+        local coordText = getText("UI_RMMP_CoordMouse", math.floor(mwx), math.floor(mwy))
         if self.point1 then
             coordText = coordText .. "  |  " ..
-                            string.format(T("CoordPoint1"), math.floor(self.point1.x), math.floor(self.point1.y))
+                            getText("UI_RMMP_CoordPoint1", math.floor(self.point1.x), math.floor(self.point1.y))
         end
         if self.point2 then
             coordText = coordText .. "  |  " ..
-                            string.format(T("CoordPoint2"), math.floor(self.point2.x), math.floor(self.point2.y))
+                            getText("UI_RMMP_CoordPoint2", math.floor(self.point2.x), math.floor(self.point2.y))
         end
         self.coordLabel:setName(coordText)
     end
@@ -713,7 +813,14 @@ function ISRegionMapPicker:updateIdFromName()
     end
 end
 
-function ISRegionMapPicker:getPropertiesFromForm()
+function ISRegionMapPicker:getPropertiesFromForm(baseProps)
+    local props = {}
+    if type(baseProps) == "table" then
+        for k, v in pairs(baseProps) do
+            props[k] = v
+        end
+    end
+
     local function parseNum(entry)
         return tonumber(entry:getText()) or 0
     end
@@ -724,42 +831,42 @@ function ISRegionMapPicker:getPropertiesFromForm()
     if maxHits > 99 then
         maxHits = 99
     end
-    return {
-        pvpEnabled = self.boolTickBox:isSelected(1),
-        announceEntry = self.boolTickBox:isSelected(2),
-        announceExit = self.boolTickBox:isSelected(3),
-        sprinterChance = parseNum(self.sprinterEntry),
-        shamblerChance = parseNum(self.shamblerEntry),
-        hawkVisionChance = parseNum(self.hawkVisionEntry),
-        badVisionChance = parseNum(self.badVisionEntry),
-        normalVisionChance = parseNum(self.normalVisionEntry),
-        poorVisionChance = parseNum(self.poorVisionEntry),
-        randomVisionChance = parseNum(self.randomVisionEntry),
-        goodHearingChance = parseNum(self.goodHearEntry),
-        badHearingChance = parseNum(self.badHearEntry),
-        pinpointHearingChance = parseNum(self.pinpointHearingEntry),
-        normalHearingChance = parseNum(self.normalHearingEntry),
-        poorHearingChance = parseNum(self.poorHearingEntry),
-        randomHearingChance = parseNum(self.randomHearingEntry),
-        resistantChance = parseNum(self.resistEntry),
-        toughnessChance = parseNum(self.toughnessEntry),
-        normalToughnessChance = parseNum(self.normalToughnessEntry),
-        fragileChance = parseNum(self.fragileEntry),
-        randomToughnessChance = parseNum(self.randomToughnessEntry),
-        superhumanChance = parseNum(self.superhumanEntry),
-        weakChance = parseNum(self.weakEntry),
-        navigationChance = parseNum(self.navigationEntry),
-        memoryLongChance = parseNum(self.memoryLongEntry),
-        memoryNormalChance = parseNum(self.memoryNormalEntry),
-        memoryShortChance = parseNum(self.memoryShortEntry),
-        memoryNoneChance = parseNum(self.memoryNoneEntry),
-        memoryRandomChance = parseNum(self.memoryRandomEntry),
-        -- Legacy aliases still consumed by server helper (second toughness lanes).
-        normalToughness = parseNum(self.normalToughnessEntry),
-        randomToughness = parseNum(self.randomToughnessEntry),
-        maxHits = maxHits,
-        message = self.messageEntry:getText() or ""
-    }
+    props.pvpEnabled = self.boolTickBox:isSelected(1)
+    props.announceEntry = self.boolTickBox:isSelected(2)
+    props.announceExit = self.boolTickBox:isSelected(3)
+    props.sprinterChance = parseNum(self.sprinterEntry)
+    props.shamblerChance = parseNum(self.shamblerEntry)
+    props.hawkVisionChance = parseNum(self.hawkVisionEntry)
+    props.badVisionChance = parseNum(self.badVisionEntry)
+    props.normalVisionChance = parseNum(self.normalVisionEntry)
+    props.poorVisionChance = parseNum(self.poorVisionEntry)
+    props.randomVisionChance = parseNum(self.randomVisionEntry)
+    props.goodHearingChance = parseNum(self.goodHearEntry)
+    props.badHearingChance = parseNum(self.badHearEntry)
+    props.pinpointHearingChance = parseNum(self.pinpointHearingEntry)
+    props.normalHearingChance = parseNum(self.normalHearingEntry)
+    props.poorHearingChance = parseNum(self.poorHearingEntry)
+    props.randomHearingChance = parseNum(self.randomHearingEntry)
+    props.resistantChance = parseNum(self.resistEntry)
+    props.toughnessChance = parseNum(self.toughnessEntry)
+    props.normalToughnessChance = parseNum(self.normalToughnessEntry)
+    props.fragileChance = parseNum(self.fragileEntry)
+    props.randomToughnessChance = parseNum(self.randomToughnessEntry)
+    props.superhumanChance = parseNum(self.superhumanEntry)
+    props.weakChance = parseNum(self.weakEntry)
+    props.navigationChance = parseNum(self.navigationEntry)
+    props.memoryLongChance = parseNum(self.memoryLongEntry)
+    props.memoryNormalChance = parseNum(self.memoryNormalEntry)
+    props.memoryShortChance = parseNum(self.memoryShortEntry)
+    props.memoryNoneChance = parseNum(self.memoryNoneEntry)
+    props.memoryRandomChance = parseNum(self.memoryRandomEntry)
+    -- Legacy aliases still consumed by server helper (second toughness lanes).
+    props.normalToughness = parseNum(self.normalToughnessEntry)
+    props.randomToughness = parseNum(self.randomToughnessEntry)
+    props.maxHits = maxHits
+    props.message = self.messageEntry:getText() or ""
+
+    return props
 end
 
 -- ============================================================================
@@ -800,7 +907,8 @@ function ISRegionMapPicker:onSubmit()
         return
     end
 
-    local props = self:getPropertiesFromForm()
+    local props = self:getPropertiesFromForm(self.isEditMode and self.editRegion and self.editRegion.customProperties or
+                                                 nil)
 
     local regionDef = {
         id = id,
@@ -815,9 +923,38 @@ function ISRegionMapPicker:onSubmit()
         customProperties = props
     }
 
-    sendClientCommand("RegionManager", "AddRegion", regionDef)
-    player:Say(string.format(T("SaySubmitting"), name), 0.7, 0.7, 1, UIFont.Small, 2, "radio")
-    print("[RegionManager MapPicker] Sent AddRegion command: " .. id)
+    if self.isEditMode then
+        regionDef.originalId = self.editOriginalId or id
+        sendClientCommand("RegionManager", "UpdateRegion", regionDef)
+        player:Say("Submitting region update: " .. name .. "...", 0.7, 0.7, 1, UIFont.Small, 2, "radio")
+        print("[RegionManager MapPicker] Sent UpdateRegion command: " .. tostring(regionDef.originalId) .. " -> " .. id)
+    else
+        sendClientCommand("RegionManager", "AddRegion", regionDef)
+        player:Say(string.format(T("SaySubmitting"), name), 0.7, 0.7, 1, UIFont.Small, 2, "radio")
+        print("[RegionManager MapPicker] Sent AddRegion command: " .. id)
+    end
+end
+
+function ISRegionMapPicker:onDelete()
+    if not self.isEditMode then
+        return
+    end
+
+    local player = getPlayer()
+    local originalId = self.editOriginalId or (self.editRegion and self.editRegion.id)
+    if not player or not originalId or originalId == "" then
+        return
+    end
+
+    sendClientCommand("RegionManager", "DeleteRegion", {
+        originalId = originalId
+    })
+    player:Say("Deleting region: " .. tostring(originalId) .. "...", 1, 0.6, 0.2, UIFont.Small, 2, "radio")
+end
+
+function ISRegionMapPicker:onBack()
+    self:close()
+    RegionManager.AdminPanel.Open()
 end
 
 function ISRegionMapPicker:onCancel()
@@ -825,6 +962,9 @@ function ISRegionMapPicker:onCancel()
 end
 
 function ISRegionMapPicker:close()
+    if RegionManager and RegionManager.MapPicker and RegionManager.MapPicker.instance == self then
+        RegionManager.MapPicker.instance = nil
+    end
     self:setVisible(false)
     self:removeFromUIManager()
 end
@@ -851,6 +991,9 @@ function ISRegionMapPicker:new(x, y, width, height)
     o.moveWithMouse = true
     o.isPanningMap = false
     o.panDragDist = 0
+    o.isEditMode = false
+    o.editRegion = nil
+    o.editOriginalId = nil
     return o
 end
 
@@ -863,7 +1006,7 @@ function RegionManager.MapPicker.Open()
         return
     end
 
-    if not isDebugEnabled() then
+    if player:getAccessLevel() == "None" then
         return
     end
 
@@ -873,11 +1016,48 @@ function RegionManager.MapPicker.Open()
     local y = (getCore():getScreenHeight() - height) / 2
 
     local panel = ISRegionMapPicker:new(x, y, width, height)
+    panel.isEditMode = false
+    panel.editRegion = nil
+    panel.editOriginalId = nil
+    RegionManager.MapPicker.instance = panel
     panel:initialise()
     panel:addToUIManager()
     panel:setVisible(true)
 
     print("[RegionManager MapPicker] Panel opened by: " .. player:getUsername())
+end
+
+---@param region RegionDefinition
+function RegionManager.MapPicker.OpenForEdit(region)
+    local player = getPlayer()
+    if not player then
+        return
+    end
+
+    if player:getAccessLevel() == "None" then
+        return
+    end
+
+    if not region or not region.id then
+        return
+    end
+
+    local width = 900
+    local height = 950
+    local x = (getCore():getScreenWidth() - width) / 2
+    local y = (getCore():getScreenHeight() - height) / 2
+
+    local panel = ISRegionMapPicker:new(x, y, width, height)
+    panel.isEditMode = true
+    panel.editRegion = region
+    panel.editOriginalId = region.id
+    RegionManager.MapPicker.instance = panel
+    panel:initialise()
+    panel:addToUIManager()
+    panel:setVisible(true)
+
+    print("[RegionManager MapPicker] Edit panel opened by: " .. player:getUsername() .. " for region " ..
+              tostring(region.id))
 end
 
 print("[RegionManager MapPicker] Map picker module loaded")

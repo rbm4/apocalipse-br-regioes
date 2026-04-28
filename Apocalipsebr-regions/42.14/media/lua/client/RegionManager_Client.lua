@@ -2,8 +2,9 @@
 -- File: media/lua/client/RegionManager_Client.lua
 -- Client-side UI and notifications
 -- ============================================================================
-
-if not isClient() then return end
+if not isClient() then
+    return
+end
 
 require "RegionManager_Config"
 
@@ -23,15 +24,17 @@ end
 ---@param isEntry boolean
 local function showZoneNotification(zoneName, message, color, isEntry)
     local player = getPlayer()
-    if not player then return end
-    
+    if not player then
+        return
+    end
+
     -- Use game's HaloNote system for notifications
     local r = color and color.r or 1.0
     local g = color and color.g or 1.0
     local b = color and color.b or 1.0
-    
+
     player:Say(message, r, g, b, UIFont.Medium, 3, "radio")
-    
+
     -- Log to console
     local prefix = isEntry and "[ENTERED]" or "[LEFT]"
     log(prefix .. " " .. zoneName)
@@ -42,21 +45,23 @@ end
 ---@param command string
 ---@param args table
 local function OnServerCommand(module, command, args)
-    if module ~= "RegionManager" then return end
-    
+    if module ~= "RegionManager" then
+        return
+    end
+
     if command == "ZoneInfo" then
         -- Display zone info UI
         log("Current zones: " .. #args.zones)
         for _, zone in ipairs(args.zones) do
             log("  - " .. zone.name)
         end
-        
+
     elseif command == "ExportComplete" then
         local player = getPlayer()
         if player then
             player:Say("Region configuration exported successfully!", 0, 1, 0, UIFont.Medium, 3, "radio")
         end
-        
+
     elseif command == "AllZoneBoundaries" then
         -- Receive all zone boundary data from server
         RegionManager.Client.zoneData = args.zones or {}
@@ -101,7 +106,9 @@ local function OnServerCommand(module, command, args)
         ---@return table|nil
         RegionManager.Client.getZonesAt = function(x, y)
             local g = RegionManager.Client.zoneGrid
-            if not g then return nil end
+            if not g then
+                return nil
+            end
             local key = math.floor(x / CELL) .. ":" .. math.floor(y / CELL)
             return g[key]
         end
@@ -128,14 +135,54 @@ local function OnServerCommand(module, command, args)
             player:Say(msg, 1, 0.3, 0.3, UIFont.Medium, 3, "radio")
         end
         log("Region add failed: " .. tostring(args.reason))
+
+    elseif command == "RegionUpdated" then
+        local player = getPlayer()
+        if player then
+            local msg = "Region '" .. (args.name or args.id) .. "' updated successfully! All zones reloaded."
+            player:Say(msg, 0.3, 1, 0.3, UIFont.Medium, 3, "radio")
+        end
+        log("Region updated: " .. tostring(args.originalId) .. " -> " .. tostring(args.id))
+
+    elseif command == "RegionUpdateFailed" then
+        local player = getPlayer()
+        if player then
+            local msg = "Failed to update region: " .. (args.reason or "Unknown error")
+            player:Say(msg, 1, 0.3, 0.3, UIFont.Medium, 3, "radio")
+        end
+        log("Region update failed: " .. tostring(args.reason))
+
+    elseif command == "RegionDeleted" then
+        local player = getPlayer()
+        if player then
+            local msg = "Region '" .. (args.name or args.id) .. "' deleted successfully! All zones reloaded."
+            player:Say(msg, 0.3, 1, 0.3, UIFont.Medium, 3, "radio")
+        end
+        if RegionManager and RegionManager.MapPicker and RegionManager.MapPicker.instance then
+            RegionManager.MapPicker.instance:close()
+        end
+        if RegionManager and RegionManager.AdminPanel and RegionManager.AdminPanel.Open then
+            RegionManager.AdminPanel.Open()
+        end
+        log("Region deleted: " .. tostring(args.id))
+
+    elseif command == "RegionDeleteFailed" then
+        local player = getPlayer()
+        if player then
+            local msg = "Failed to delete region: " .. (args.reason or "Unknown error")
+            player:Say(msg, 1, 0.3, 0.3, UIFont.Medium, 3, "radio")
+        end
+        log("Region delete failed: " .. tostring(args.reason))
     end
 end
 
 -- Request zone info for current position
 local function requestZoneInfo()
     local player = getPlayer()
-    if not player then return end
-    
+    if not player then
+        return
+    end
+
     sendClientCommand("RegionManager", "RequestZoneInfo", {
         x = player:getX(),
         y = player:getY()
@@ -146,7 +193,6 @@ end
 local function showCurrentZones()
     requestZoneInfo()
 end
-
 
 -- Event registration
 Events.OnServerCommand.Add(OnServerCommand)

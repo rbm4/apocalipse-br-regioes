@@ -1,4 +1,11 @@
 {
+    "UI_Region_Manager_Panel": "Aluehallinta",
+    "UI_Region_Manager_Teleport": "Teleporttaa",
+    "UI_Region_Manager_Refresh": "Paivita",
+    "UI_Region_Manager_New_Region": "Uusi alue",
+    "UI_Region_Manager_Edit_Region": "Muokkaa aluetta",
+    "UI_Region_Manager_Close": "Sulje",
+    "UI_Regions_Panel": "Aluepaneeli",
     "UI_RMMP_Title": "Luo uusi alue - Kartanvalitsin",
     "UI_RMMP_StatusPickFirst": "Napsauta karttaa valitaksesi alueen ENSIMMÄISEN kulman.",
     "UI_RMMP_StatusPickSecond": "Napsauta karttaa valitaksesi alueen TOINEN kulma.",
@@ -58,9 +65,11 @@
     "UI_RMMP_LblMessage": "Viesti",
     "UI_RMMP_BtnReset": "Palauta valinta",
     "UI_RMMP_BtnSubmit": "Lähetä",
+    "UI_RMMP_BtnBack": "Takaisin",
     "UI_RMMP_BtnCancel": "Peruuttaa",
     "UI_RMMP_SaySelectBoth": "Valitse ensin kartan molemmat kulmat!",
     "UI_RMMP_SayEnterName": "Anna alueen nimi!",
     "UI_RMMP_SayEnterId": "Anna alueen tunnus!",
-    "UI_RMMP_SaySubmitting": "Lähetetään uutta aluetta: %s..."
+    "UI_RMMP_SaySubmitting": "Lähetetään uutta aluetta: %s...",
+    "UI_RMMP_BtnDelete": "Poista"
 }

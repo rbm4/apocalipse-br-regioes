@@ -1,4 +1,11 @@
 {
+    "UI_Region_Manager_Panel": "Gestor de regiones",
+    "UI_Region_Manager_Teleport": "Teletransportar",
+    "UI_Region_Manager_Refresh": "Actualizar",
+    "UI_Region_Manager_New_Region": "Nueva region",
+    "UI_Region_Manager_Edit_Region": "Editar region",
+    "UI_Region_Manager_Close": "Cerrar",
+    "UI_Regions_Panel": "Panel de regiones",
     "UI_RMMP_Title": "Crear nueva región - Selector de mapas",
     "UI_RMMP_StatusPickFirst": "Haga clic en el mapa para seleccionar el PRIMER rincón de la región.",
     "UI_RMMP_StatusPickSecond": "Haga clic en el mapa para seleccionar la SEGUNDA esquina de la región.",
@@ -58,9 +65,11 @@
     "UI_RMMP_LblMessage": "Mensaje",
     "UI_RMMP_BtnReset": "Restablecer selección",
     "UI_RMMP_BtnSubmit": "Entregar",
+    "UI_RMMP_BtnBack": "Volver",
     "UI_RMMP_BtnCancel": "Cancelar",
     "UI_RMMP_SaySelectBoth": "¡Selecciona primero ambas esquinas del mapa!",
     "UI_RMMP_SayEnterName": "¡Ingrese un nombre de región!",
     "UI_RMMP_SayEnterId": "¡Ingrese una identificación de región!",
-    "UI_RMMP_SaySubmitting": "Enviando nueva región: %s..."
+    "UI_RMMP_SaySubmitting": "Enviando nueva región: %s...",
+    "UI_RMMP_BtnDelete": "Eliminar"
 }
