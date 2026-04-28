@@ -571,6 +571,7 @@ end
 -- Cached ConfigOption references (NOT just values)
 local speedConfigOption = nil
 local cognitionConfigOption = nil
+local cognitionOpenDoorChance = nil
 local sightConfigOption = nil
 local hearingConfigOption = nil
 local toughnessConfigOption = nil
@@ -585,6 +586,7 @@ local function initializeReflectionCache()
         local sandbox = getSandboxOptions()
         speedConfigOption = sandbox:getOptionByName("ZombieLore.Speed"):asConfigOption()
         cognitionConfigOption = sandbox:getOptionByName("ZombieLore.Cognition"):asConfigOption()
+        cognitionOpenDoorChance = sandbox:getOptionByName("ZombieLore.DoorOpeningPercentage"):asConfigOption()
         sightConfigOption = sandbox:getOptionByName("ZombieLore.Sight"):asConfigOption()
         hearingConfigOption = sandbox:getOptionByName("ZombieLore.Hearing"):asConfigOption()
         toughnessConfigOption = sandbox:getOptionByName("ZombieLore.Toughness"):asConfigOption()
@@ -687,6 +689,7 @@ function RegionManager.Shared.ServerSideProperties(zombie, data, sandboxOptions)
     -- Store original config option values
     local origSpeed = speedConfigOption:getValue()
     local origCognition = cognitionConfigOption:getValue()
+    local origDoorChance = cognitionOpenDoorChance:getValue()
     local origSight = sightConfigOption:getValue()
     local origHearing = hearingConfigOption:getValue()
     local origToughness = toughnessConfigOption:getValue()
@@ -708,6 +711,7 @@ function RegionManager.Shared.ServerSideProperties(zombie, data, sandboxOptions)
     -- Cognition
     if data.hasNavigation then
         cognitionConfigOption:setValue(COGNITION_NAVIGATE_DOORS)
+        cognitionOpenDoorChance:setValue(100)
     end
 
     -- Sight
@@ -783,6 +787,7 @@ function RegionManager.Shared.ServerSideProperties(zombie, data, sandboxOptions)
     -- ========================================================================
     speedConfigOption:setValue(origSpeed)
     cognitionConfigOption:setValue(origCognition)
+    cognitionOpenDoorChance:setValue(origDoorChance)
     sightConfigOption:setValue(origSight)
     hearingConfigOption:setValue(origHearing)
     toughnessConfigOption:setValue(origToughness)

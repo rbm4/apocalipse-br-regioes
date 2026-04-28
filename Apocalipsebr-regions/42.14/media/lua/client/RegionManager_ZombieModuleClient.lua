@@ -32,6 +32,7 @@ RegionManager.ZombieModuleClient = RegionManager.ZombieModuleClient or {}
 -- Tracked module zombies: [onlineID] = { moduleDef, state... }
 local trackedZombies = {}
 local tickCounter = 0
+local ZOMBIE_UPDATE_INTERVAL_TICKS = 25
 
 -- ============================================================================
 -- Theme fade-out system
@@ -346,6 +347,51 @@ local function smashDoor(zombie, door, damagePer)
     end
 end
 
+--- Try opening a door-like obstacle so navigation can continue naturally.
+--- Returns true when the door ended up open.
+---@param zombie IsoZombie
+---@param door IsoThumpable|IsoDoor
+---@return boolean
+local function tryOpenDoor(zombie, door)
+    if not door then
+        return false
+    end
+
+    local barricaded = false
+    if door.isBarricaded then
+        local ok, result = pcall(function()
+            return door:isBarricaded()
+        end)
+        barricaded = ok and result and true or false
+    end
+    if barricaded then
+        return false
+    end
+
+    if door.ToggleDoor then
+        pcall(door.ToggleDoor, door, zombie)
+    end
+
+    if door.IsOpen then
+        local ok, result = pcall(function()
+            return door:IsOpen()
+        end)
+        if ok and result then
+            return true
+        end
+    end
+    if door.isOpen then
+        local ok, result = pcall(function()
+            return door:isOpen()
+        end)
+        if ok and result then
+            return true
+        end
+    end
+
+    return false
+end
+
 --- Scan the zombie's current square and adjacent squares for obstacles.
 --- Returns the first window or door found, or nil.
 ---@param zombie IsoZombie
@@ -358,7 +404,8 @@ local function findAdjacentObstacle(zombie)
 
     -- Check objects on the zombie's square and immediate neighbours
     local squares = {sq}
-    for dir = 0, 3 do
+    local dirs = {IsoDirections.N, IsoDirections.S, IsoDirections.W, IsoDirections.E}
+    for _, dir in ipairs(dirs) do
         local adj = sq:getAdjacentSquare(dir)
         if adj then
             squares[#squares + 1] = adj
@@ -412,6 +459,13 @@ local function onZombieUpdate(zombie)
         trackedZombies[id] = nil
         return
     end
+
+    -- Throttle expensive per-zombie processing to reduce per-frame pressure.
+    data.nextProcessTick = data.nextProcessTick or 0
+    if tickCounter < data.nextProcessTick then
+        return
+    end
+    data.nextProcessTick = tickCounter + ZOMBIE_UPDATE_INTERVAL_TICKS
 
     local moduleDef = data.moduleDef
     local behavior = moduleDef.behavior or {}
@@ -551,19 +605,46 @@ local function onZombieUpdate(zombie)
                     local window = nil
                     local door = nil
                     if thumpTarget then
-                        if instanceof(thumpTarget, "IsoWindow") then
-                            window = thumpTarget
-                        elseif instanceof(thumpTarget, "IsoDoor") or instanceof(thumpTarget, "IsoThumpable") then
-                            door = thumpTarget
-                        else
-                            local okThumpable, thumpable = pcall(function()
-                                return thumpTarget:getThumpableFor(zombie)
+                        -- In Lua, getThumpTarget can surface as a broad object type;
+                        -- object-name classification is the most reliable first pass.
+                        local objectName = nil
+                        if thumpTarget.getObjectName then
+                            local okName, name = pcall(function()
+                                return thumpTarget:getObjectName()
                             end)
-                            if okThumpable and thumpable then
-                                if instanceof(thumpable, "IsoWindow") then
-                                    window = thumpable
-                                else
-                                    door = thumpable
+                            if okName then
+                                objectName = name
+                            end
+                        end
+
+                        if objectName == "Window" then
+                            window = thumpTarget
+                        elseif objectName == "Door" then
+                            door = thumpTarget
+                        elseif objectName == "Thumpable" then
+                            local okIsDoor, isDoor = pcall(function()
+                                return thumpTarget:isDoor()
+                            end)
+                            if okIsDoor and isDoor then
+                                door = thumpTarget
+                            end
+                        end
+
+                        if not window and not door then
+                            if instanceof(thumpTarget, "IsoWindow") then
+                                window = thumpTarget
+                            elseif instanceof(thumpTarget, "IsoDoor") or instanceof(thumpTarget, "IsoThumpable") then
+                                door = thumpTarget
+                            else
+                                local okThumpable, thumpable = pcall(function()
+                                    return thumpTarget:getThumpableFor(zombie)
+                                end)
+                                if okThumpable and thumpable then
+                                    if instanceof(thumpable, "IsoWindow") then
+                                        window = thumpable
+                                    else
+                                        door = thumpable
+                                    end
                                 end
                             end
                         end
@@ -575,8 +656,12 @@ local function onZombieUpdate(zombie)
                         smashWindow(zombie, window, dmg)
                         data.lastSmashTick = tickCounter
                     elseif door then
-                        smashDoor(zombie, door, dmg)
-                        data.lastSmashTick = tickCounter
+                        if tryOpenDoor(zombie, door) then
+                            data.lastSmashTick = tickCounter
+                        elseif behavior.smashDoors then
+                            smashDoor(zombie, door, dmg)
+                            data.lastSmashTick = tickCounter
+                        end
                     end
                     -- Re-redirect immediately after clearing obstacle
                     zombie:pathToLocationF(player:getX(), player:getY(), player:getZ())
