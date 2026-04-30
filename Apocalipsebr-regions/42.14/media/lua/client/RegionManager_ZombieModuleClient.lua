@@ -32,7 +32,7 @@ RegionManager.ZombieModuleClient = RegionManager.ZombieModuleClient or {}
 -- Tracked module zombies: [onlineID] = { moduleDef, state... }
 local trackedZombies = {}
 local tickCounter = 0
-local ZOMBIE_UPDATE_INTERVAL_TICKS = 25
+local ZOMBIE_UPDATE_INTERVAL_TICKS = 35
 
 -- ============================================================================
 -- Theme fade-out system
@@ -305,15 +305,14 @@ end
 --- Damage or destroy a window the zombie is adjacent to.
 ---@param zombie IsoZombie
 ---@param window IsoWindow
----@param damagePer number  Damage per smash tick
-local function smashWindow(zombie, window, damagePer)
+local function smashWindow(zombie, window)
     if not window then
         return
     end
     -- Destroy barricade first, then the window itself
     local barricade = window:getBarricadeForCharacter(zombie)
     if barricade then
-        barricade:Damage(damagePer)
+        barricade:Damage(50)
         return
     end
     -- If the window has glass / is not broken, smash it
@@ -325,71 +324,29 @@ local function smashWindow(zombie, window, damagePer)
 end
 
 --- Damage a door / barricaded door the zombie is adjacent to.
+--- In MP, sends a server-authoritative thump command so door HP changes always sync.
+--- In SP/local fallback, calls door:Thump(zombie) directly.
 ---@param zombie IsoZombie
 ---@param door IsoThumpable|IsoDoor
----@param damagePer number  Damage per smash tick
-local function smashDoor(zombie, door, damagePer)
+local function smashDoor(zombie, door)
     if not door then
         return
     end
-    -- If the door is openable (unlocked), just open it
-    if instanceof(door, "IsoDoor") then
-        if not door:isLocked() and not door:isBarricaded() then
-            door:ToggleDoor(zombie)
-            return
-        end
-    end
-    -- Damage through the thumpable interface
-    if door.Damage then
-        door:Damage(damagePer)
-    elseif door.damage then
-        door:damage(damagePer)
-    end
-end
-
---- Try opening a door-like obstacle so navigation can continue naturally.
---- Returns true when the door ended up open.
----@param zombie IsoZombie
----@param door IsoThumpable|IsoDoor
----@return boolean
-local function tryOpenDoor(zombie, door)
-    if not door then
-        return false
+    local sq = door:getSquare()
+    if isClient() and sq then
+        local player = getPlayer()
+        sendClientCommand(player, "Apocalipse_TSY", "ForceDoorThump", {
+            zombieID = zombie:getOnlineID(),
+            pid = RegionManager.Shared.GetReliablePID(zombie),
+            x = sq:getX(),
+            y = sq:getY(),
+            z = sq:getZ()
+        })
+        return
     end
 
-    local barricaded = false
-    if door.isBarricaded then
-        local ok, result = pcall(function()
-            return door:isBarricaded()
-        end)
-        barricaded = ok and result and true or false
-    end
-    if barricaded then
-        return false
-    end
-
-    if door.ToggleDoor then
-        pcall(door.ToggleDoor, door, zombie)
-    end
-
-    if door.IsOpen then
-        local ok, result = pcall(function()
-            return door:IsOpen()
-        end)
-        if ok and result then
-            return true
-        end
-    end
-    if door.isOpen then
-        local ok, result = pcall(function()
-            return door:isOpen()
-        end)
-        if ok and result then
-            return true
-        end
-    end
-
-    return false
+    -- Local fallback (single-player/offline)
+    door:Thump(zombie)
 end
 
 --- Scan the zombie's current square and adjacent squares for obstacles.
@@ -578,7 +535,7 @@ local function onZombieUpdate(zombie)
         -- Obstacle smashing: if the zombie is stuck on a window/door, break
         -- through it and re-redirect to the player.
         if behavior.smashObstacles then
-            local smashCooldown = behavior.smashCooldownTicks or 60
+            local smashCooldown = behavior.smashCooldownTicks or 10
             if not data.lastSmashTick then
                 data.lastSmashTick = 0
             end
@@ -601,27 +558,16 @@ local function onZombieUpdate(zombie)
                     isStuck = window ~= nil or door ~= nil
                 end
                 if isStuck then
-                    local dmg = behavior.smashDamage or 100
                     local window = nil
                     local door = nil
                     if thumpTarget then
                         -- In Lua, getThumpTarget can surface as a broad object type;
                         -- object-name classification is the most reliable first pass.
-                        local objectName = nil
-                        if thumpTarget.getObjectName then
-                            local okName, name = pcall(function()
-                                return thumpTarget:getObjectName()
-                            end)
-                            if okName then
-                                objectName = name
-                            end
-                        end
-
-                        if objectName == "Window" then
+                        if instanceof(thumpTarget, "IsoWindow") then
                             window = thumpTarget
-                        elseif objectName == "Door" then
+                        elseif instanceof(thumpTarget, "IsoDoor") then
                             door = thumpTarget
-                        elseif objectName == "Thumpable" then
+                        elseif instanceof(thumpTarget, "IsoThumpable") then
                             local okIsDoor, isDoor = pcall(function()
                                 return thumpTarget:isDoor()
                             end)
@@ -653,15 +599,11 @@ local function onZombieUpdate(zombie)
                         window, door = findAdjacentObstacle(zombie)
                     end
                     if window then
-                        smashWindow(zombie, window, dmg)
+                        smashWindow(zombie, window)
                         data.lastSmashTick = tickCounter
                     elseif door then
-                        if tryOpenDoor(zombie, door) then
-                            data.lastSmashTick = tickCounter
-                        elseif behavior.smashDoors then
-                            smashDoor(zombie, door, dmg)
-                            data.lastSmashTick = tickCounter
-                        end
+                        smashDoor(zombie, door)
+                        data.lastSmashTick = tickCounter
                     end
                     -- Re-redirect immediately after clearing obstacle
                     zombie:pathToLocationF(player:getX(), player:getY(), player:getZ())

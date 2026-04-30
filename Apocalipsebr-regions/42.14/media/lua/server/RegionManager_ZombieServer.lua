@@ -71,7 +71,10 @@ local function RegionManagerZombie_OnZombieCreate(persistentID, x, y)
     -- Find overlapping regions
     local regions = ZombieHelper.FindRegionsAt(x, y)
     local hasRegions = false
-    for _ in pairs(regions) do hasRegions = true; break end
+    for _ in pairs(regions) do
+        hasRegions = true;
+        break
+    end
     if not hasRegions then
         return nil
     end
@@ -99,7 +102,9 @@ end
 local function Apocalipse_TSY_PeriodicCleanup()
     local globalData = Apocalipse_TSY_GetGlobalModData()
     local cell = getCell()
-    if not cell then return end
+    if not cell then
+        return
+    end
 
     local activeZombies = {}
     local zombies = cell:getZombieList()
@@ -137,25 +142,128 @@ local function Apocalipse_TSY_OnClientCommand(module, command, player, args)
         return
     end
 
+    -- ---- Server-authoritative door thump fallback ----
+    if command == "ForceDoorThump" and player and args and args.zombieID and args.x and args.y and args.z then
+        local zombieID = tonumber(args.zombieID)
+        local x = tonumber(args.x)
+        local y = tonumber(args.y)
+        local z = tonumber(args.z)
+        print("[ForceDoorThump] recv user=" .. tostring(player and player:getUsername()) .. " zombieID=" ..
+                  tostring(args.zombieID) .. " pid=" .. tostring(args.pid) .. " xyz=" .. tostring(args.x) .. "," ..
+                  tostring(args.y) .. "," .. tostring(args.z))
+        if not zombieID or not x or not y or not z then
+            print("[ForceDoorThump] reject invalid numeric args")
+            return
+        end
+
+        local zombie = ZombieHelper.FindZombieByOnlineID(zombieID)
+        if zombie then
+            print("[ForceDoorThump] zombie resolved by onlineID=" .. tostring(zombieID))
+        end
+        if not zombie and args.pid then
+            local pid = tostring(args.pid)
+            local cell = getCell()
+            if cell then
+                local zombies = cell:getZombieList()
+                if zombies then
+                    for i = 0, zombies:size() - 1 do
+                        local cand = zombies:get(i)
+                        if cand and not cand:isDead() and ZombieHelper.GetReliablePID(cand) == pid then
+                            zombie = cand
+                            print("[ForceDoorThump] zombie resolved by pid=" .. tostring(pid) .. " onlineID=" ..
+                                      tostring(cand:getOnlineID()))
+                            break
+                        end
+                    end
+                end
+            end
+        end
+        if not zombie or zombie:isDead() then
+            print("[ForceDoorThump] reject zombie not found/dead")
+            return
+        end
+
+        local function isDoorLike(obj)
+            return obj and (instanceof(obj, "IsoDoor") or (instanceof(obj, "IsoThumpable") and obj:isDoor()))
+        end
+
+        local function applyForcedDoorDamage(doorObj, thumper)
+            local before = tonumber(doorObj:getHealth()) or 0
+            local maxHp = tonumber(doorObj:getMaxHealth()) or 0
+            local forceDamage = 24
+            local after = before - forceDamage
+            doorObj:setHealth(after)
+            doorObj:sync()
+            print("[ForceDoorThump] forced damage " .. tostring(forceDamage) .. " hp " .. tostring(before) .. "/" ..
+                      tostring(maxHp) .. " -> " .. tostring(after) .. "/" .. tostring(maxHp))
+
+            -- Keep vanilla break/destruction path and sounds.
+            doorObj:Thump(thumper)
+        end
+
+        -- Preferred target: whatever the server zombie is currently thumping.
+        local okTarget, thumpTarget = pcall(function()
+            return zombie:getThumpTarget()
+        end)
+        if okTarget and isDoorLike(thumpTarget) then
+            local tsq = thumpTarget:getSquare()
+            print("[ForceDoorThump] using zombie thumpTarget at " .. tostring(tsq and tsq:getX()) .. "," ..
+                      tostring(tsq and tsq:getY()) .. "," .. tostring(tsq and tsq:getZ()))
+            applyForcedDoorDamage(thumpTarget, zombie)
+            print("[ForceDoorThump] thump applied via thumpTarget")
+            return
+        end
+        if not okTarget then
+            print("[ForceDoorThump] zombie:getThumpTarget() failed")
+        else
+            print("[ForceDoorThump] thumpTarget missing/not door-like, using square fallback")
+        end
+
+        local sq = getCell():getGridSquare(x, y, z)
+        if not sq then
+            print("[ForceDoorThump] reject square not found at " .. tostring(x) .. "," .. tostring(y) .. "," ..
+                      tostring(z))
+            return
+        end
+
+        local objects = sq:getObjects()
+        if not objects then
+            print("[ForceDoorThump] reject square has no objects")
+            return
+        end
+
+        for i = 0, objects:size() - 1 do
+            local obj = objects:get(i)
+            if isDoorLike(obj) then
+                print("[ForceDoorThump] thump applied via square object index=" .. tostring(i))
+                applyForcedDoorDamage(obj, zombie)
+                return
+            end
+        end
+        print("[ForceDoorThump] no door-like object found on fallback square")
+        return
+    end
+
     -- ---- Admin: clear all zombie states ----
     if command == "ClearZombieStates" then
         if player and player:getAccessLevel() ~= "None" then
             local count = Apocalipse_TSY_ClearAllZombieStates()
-            sendServerCommand(player, "Apocalipse_TSY", "ClearConfirm", {count = count})
-            print("Apocalipse_TSY Server: Admin " .. player:getUsername() ..
-                  " cleared zombie ModData (" .. count .. " entries)")
+            sendServerCommand(player, "Apocalipse_TSY", "ClearConfirm", {
+                count = count
+            })
+            print("Apocalipse_TSY Server: Admin " .. player:getUsername() .. " cleared zombie ModData (" .. count ..
+                      " entries)")
         else
-            print("Apocalipse_TSY Server: Non-admin " .. player:getUsername() ..
-                  " attempted to clear zombie ModData")
+            print("Apocalipse_TSY Server: Non-admin " .. player:getUsername() .. " attempted to clear zombie ModData")
         end
         return
     end
 
     -- ---- Tough zombie hit ----
     if command == "ZombieHitTough" and player and args.zombieID then
-        local zombieID     = args.zombieID
-        local x, y         = args.x, args.y
-        local globalData   = Apocalipse_TSY_GetGlobalModData()
+        local zombieID = args.zombieID
+        local x, y = args.x, args.y
+        local globalData = Apocalipse_TSY_GetGlobalModData()
 
         -- Compute persistentID SERVER-SIDE from the actual server zombie.
         -- Uses GetReliablePID which reads the stamped AssignedPID from modData
@@ -170,14 +278,16 @@ local function Apocalipse_TSY_OnClientCommand(module, command, player, args)
         -- Fallback to client-sent PID only if server zombie not found
         if not persistentID then
             persistentID = args.persistentID
-            print("Apocalipse_TSY Server: ZombieHitTough fallback to client PID=" ..
-                  tostring(persistentID) .. " (zombie onlineID=" .. tostring(zombieID) .. " not found on server)")
+            print("Apocalipse_TSY Server: ZombieHitTough fallback to client PID=" .. tostring(persistentID) ..
+                      " (zombie onlineID=" .. tostring(zombieID) .. " not found on server)")
         end
 
         local stored = persistentID and globalData.zombies[persistentID]
 
         if stored and stored.isTough then
-            if not stored.toughnessHitCounter then stored.toughnessHitCounter = 0 end
+            if not stored.toughnessHitCounter then
+                stored.toughnessHitCounter = 0
+            end
             local maxHits = stored.maxHits or RegionManager.Shared.DEFAULT_MAX_HITS
 
             stored.toughnessHitCounter = math.min(stored.toughnessHitCounter + 1, maxHits)
@@ -186,36 +296,36 @@ local function Apocalipse_TSY_OnClientCommand(module, command, player, args)
                 print("Apocalipse_TSY Server: Tough zombie pid=" .. tostring(persistentID) .. " exhausted all lives")
             else
                 print("Apocalipse_TSY Server: Tough zombie pid=" .. tostring(persistentID) .. " hit (" ..
-                      stored.toughnessHitCounter .. "/" .. maxHits .. ")")
+                          stored.toughnessHitCounter .. "/" .. maxHits .. ")")
             end
 
             ZombieHelper.BroadcastToAll("Apocalipse_TSY", "ToughZombieHit", {
-                zombieID     = zombieID,
+                zombieID = zombieID,
                 persistentID = persistentID,
-                hitCounter   = stored.toughnessHitCounter,
-                maxHits      = maxHits,
-                x            = x,
-                y            = y,
-                isExhausted  = isExhausted,
+                hitCounter = stored.toughnessHitCounter,
+                maxHits = maxHits,
+                x = x,
+                y = y,
+                isExhausted = isExhausted
             })
             if isExhausted then
-                print("Apocalipse_TSY Server: Broadcast ToughZombieHit exhausted pid=" .. tostring(persistentID)
-                      .. " onlineID=" .. tostring(zombieID) .. " (" .. tostring(stored.toughnessHitCounter)
-                      .. "/" .. tostring(maxHits) .. ")")
+                print("Apocalipse_TSY Server: Broadcast ToughZombieHit exhausted pid=" .. tostring(persistentID) ..
+                          " onlineID=" .. tostring(zombieID) .. " (" .. tostring(stored.toughnessHitCounter) .. "/" ..
+                          tostring(maxHits) .. ")")
             end
         else
             -- No stored data - broadcast exhausted so client stops mitigating
-            print("Apocalipse_TSY Server: ZombieHitTough no match for pid=" ..
-                  tostring(persistentID) .. " (onlineID=" .. tostring(zombieID) ..
-                  ", clientPID=" .. tostring(args.persistentID) .. ")")
+            print(
+                "Apocalipse_TSY Server: ZombieHitTough no match for pid=" .. tostring(persistentID) .. " (onlineID=" ..
+                    tostring(zombieID) .. ", clientPID=" .. tostring(args.persistentID) .. ")")
             ZombieHelper.BroadcastToAll("Apocalipse_TSY", "ToughZombieHit", {
-                zombieID     = zombieID,
+                zombieID = zombieID,
                 persistentID = persistentID,
-                hitCounter   = RegionManager.Shared.DEFAULT_MAX_HITS,
-                maxHits      = RegionManager.Shared.DEFAULT_MAX_HITS,
-                x            = x,
-                y            = y,
-                isExhausted  = true,
+                hitCounter = RegionManager.Shared.DEFAULT_MAX_HITS,
+                maxHits = RegionManager.Shared.DEFAULT_MAX_HITS,
+                x = x,
+                y = y,
+                isExhausted = true
             })
         end
         return
@@ -228,7 +338,7 @@ local function Apocalipse_TSY_OnClientCommand(module, command, player, args)
         local batch = {}
 
         for _, request in ipairs(args.zombies) do
-            local zombieID     = request.zombieID
+            local zombieID = request.zombieID
             local persistentID = request.persistentID
 
             local stored = globalData.zombies[persistentID]
@@ -287,7 +397,9 @@ local function Apocalipse_TSY_OnClientCommand(module, command, player, args)
         -- instead of one sendServerCommand per zombie. The client enqueues
         -- them onto PendingApply and drains a few per tick for smooth FPS.
         if #batch > 0 then
-            sendServerCommand(player, "Apocalipse_TSY", "ConfirmZombieBatch", { items = batch })
+            sendServerCommand(player, "Apocalipse_TSY", "ConfirmZombieBatch", {
+                items = batch
+            })
         end
 
         if found > 0 or notFound > 0 then
@@ -306,9 +418,9 @@ Events.OnClientCommand.Add(Apocalipse_TSY_OnClientCommand)
 Events.OnInitWorld.Add(function()
     local sandbox = SandboxVars
     if sandbox and sandbox.ZombieLore then
-        sandbox.ZombieLore.Speed = 2               -- Random
-        sandbox.ZombieLore.SprinterPercentage = 0   -- Manual conversion
-        sandbox.ZombieLore.ActiveOnly = 1           -- Day + night
+        sandbox.ZombieLore.Speed = 2 -- Random
+        sandbox.ZombieLore.SprinterPercentage = 0 -- Manual conversion
+        sandbox.ZombieLore.ActiveOnly = 1 -- Day + night
         print("Apocalipse_TSY Server: Zombie settings initialized - Manual sprinter conversion enabled")
     end
 
@@ -330,9 +442,13 @@ end)
 -- ========================================================================
 
 local function RegionManagerZombie_OnZombieDead(zombie)
-    if not zombie then return end
+    if not zombie then
+        return
+    end
     local persistentID = ZombieHelper.GetReliablePID(zombie)
-    if not persistentID then return end
+    if not persistentID then
+        return
+    end
     local globalData = Apocalipse_TSY_GetGlobalModData()
     if globalData.zombies[persistentID] then
         globalData.zombies[persistentID] = nil
