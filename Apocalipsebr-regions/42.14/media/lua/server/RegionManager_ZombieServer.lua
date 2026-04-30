@@ -136,7 +136,56 @@ end
 -- ========================================================================
 -- Client command handler
 -- ========================================================================
+local function isDoorLike(obj)
+    return obj and (instanceof(obj, "IsoDoor") or (instanceof(obj, "IsoThumpable") and obj:isDoor()))
+end
 
+-- applyForcedThumpDamage:
+-- 1. Check if this door has a barricade facing the zombie. If so, force its HP
+--    down and then call Thump() so vanilla removal/state-change logic still runs.
+-- 2. Otherwise force HP reduction on the door itself + sync, then call
+--    Thump() to preserve vanilla break/destruction flow and sounds.
+local FORCE_DAMAGE = 24
+
+local function applyForcedThumpDamage(doorObj, thumper)
+    -- getThumpableFor redirects to a barricade if one is blocking this zombie.
+    local ok, thumpable = pcall(function()
+        return doorObj:getThumpableFor(thumper)
+    end)
+
+    if ok and thumpable and instanceof(thumpable, "IsoBarricade") then
+        local before = tonumber(thumpable:getHealth()) or 0
+        local maxHp = tonumber(thumpable:getMaxHealth()) or 0
+        local after = before - FORCE_DAMAGE
+
+        -- Keep 1 HP when this hit should destroy the barricade so the
+        -- follow-up Thump() can still run vanilla destruction/removal logic.
+        if after <= 0 then
+            thumpable:setHealth(1)
+        else
+            thumpable:setHealth(after)
+        end
+        thumpable:sync()
+        print("[ForceDoorThump] barricade damage " .. tostring(FORCE_DAMAGE) .. " hp " .. tostring(before) .. "/" ..
+                  tostring(maxHp) .. " -> " .. tostring(thumpable:getHealth()) .. "/" .. tostring(maxHp))
+
+        -- Preserve vanilla break/destruction path and sounds.
+        thumpable:Thump(thumper)
+        return
+    end
+
+    -- No barricade: force door HP directly.
+    local before = tonumber(doorObj:getHealth()) or 0
+    local maxHp = tonumber(doorObj:getMaxHealth()) or 0
+    local after = before - FORCE_DAMAGE
+    doorObj:setHealth(after)
+    doorObj:sync()
+    print("[ForceDoorThump] door damage " .. tostring(FORCE_DAMAGE) .. " hp " .. tostring(before) .. "/" ..
+              tostring(maxHp) .. " -> " .. tostring(after) .. "/" .. tostring(maxHp))
+
+    -- Preserve vanilla break/destruction path and sounds.
+    doorObj:Thump(thumper)
+end
 local function Apocalipse_TSY_OnClientCommand(module, command, player, args)
     if module ~= "Apocalipse_TSY" then
         return
@@ -183,24 +232,6 @@ local function Apocalipse_TSY_OnClientCommand(module, command, player, args)
             return
         end
 
-        local function isDoorLike(obj)
-            return obj and (instanceof(obj, "IsoDoor") or (instanceof(obj, "IsoThumpable") and obj:isDoor()))
-        end
-
-        local function applyForcedDoorDamage(doorObj, thumper)
-            local before = tonumber(doorObj:getHealth()) or 0
-            local maxHp = tonumber(doorObj:getMaxHealth()) or 0
-            local forceDamage = 24
-            local after = before - forceDamage
-            doorObj:setHealth(after)
-            doorObj:sync()
-            print("[ForceDoorThump] forced damage " .. tostring(forceDamage) .. " hp " .. tostring(before) .. "/" ..
-                      tostring(maxHp) .. " -> " .. tostring(after) .. "/" .. tostring(maxHp))
-
-            -- Keep vanilla break/destruction path and sounds.
-            doorObj:Thump(thumper)
-        end
-
         -- Preferred target: whatever the server zombie is currently thumping.
         local okTarget, thumpTarget = pcall(function()
             return zombie:getThumpTarget()
@@ -209,7 +240,7 @@ local function Apocalipse_TSY_OnClientCommand(module, command, player, args)
             local tsq = thumpTarget:getSquare()
             print("[ForceDoorThump] using zombie thumpTarget at " .. tostring(tsq and tsq:getX()) .. "," ..
                       tostring(tsq and tsq:getY()) .. "," .. tostring(tsq and tsq:getZ()))
-            applyForcedDoorDamage(thumpTarget, zombie)
+            applyForcedThumpDamage(thumpTarget, zombie)
             print("[ForceDoorThump] thump applied via thumpTarget")
             return
         end
@@ -236,7 +267,7 @@ local function Apocalipse_TSY_OnClientCommand(module, command, player, args)
             local obj = objects:get(i)
             if isDoorLike(obj) then
                 print("[ForceDoorThump] thump applied via square object index=" .. tostring(i))
-                applyForcedDoorDamage(obj, zombie)
+                applyForcedThumpDamage(obj, zombie)
                 return
             end
         end
