@@ -309,6 +309,20 @@ local function smashWindow(zombie, window)
     if not window then
         return
     end
+    local sq = window:getSquare()
+    if isClient() and sq then
+        local player = getPlayer()
+        sendClientCommand(player, "Apocalipse_TSY", "ForceWindowThump", {
+            zombieID = zombie:getOnlineID(),
+            pid = RegionManager.Shared.GetReliablePID(zombie),
+            x = sq:getX(),
+            y = sq:getY(),
+            z = sq:getZ()
+        })
+        return
+    end
+
+    -- Local fallback (single-player/offline)
     -- Destroy barricade first, then the window itself
     local barricade = window:getBarricadeForCharacter(zombie)
     if barricade then
@@ -349,6 +363,19 @@ local function smashDoor(zombie, door)
     door:Thump(zombie)
 end
 
+local function isEligibleObstacle(obj, thumper)
+    if not obj then
+        return false
+    end
+    -- Use vanilla target resolution. This naturally skips already-broken
+    -- windows/doors that have no barricade left, while still accepting
+    -- smashed windows that are still barricaded.
+    local ok, thumpable = pcall(function()
+        return obj:getThumpableFor(thumper)
+    end)
+    return ok and thumpable ~= nil
+end
+
 --- Scan the zombie's current square and adjacent squares for obstacles.
 --- Returns the first window or door found, or nil.
 ---@param zombie IsoZombie
@@ -375,10 +402,11 @@ local function findAdjacentObstacle(zombie)
             for j = 0, objects:size() - 1 do
                 local obj = objects:get(j)
                 if obj then
-                    if instanceof(obj, "IsoWindow") then
+                    if instanceof(obj, "IsoWindow") and isEligibleObstacle(obj, zombie) then
                         return obj, nil
                     end
-                    if instanceof(obj, "IsoDoor") or (instanceof(obj, "IsoThumpable") and obj:isDoor()) then
+                    if (instanceof(obj, "IsoDoor") or (instanceof(obj, "IsoThumpable") and obj:isDoor())) and
+                        isEligibleObstacle(obj, zombie) then
                         return nil, obj
                     end
                 end
@@ -560,44 +588,7 @@ local function onZombieUpdate(zombie)
                 if isStuck then
                     local window = nil
                     local door = nil
-                    if thumpTarget then
-                        -- In Lua, getThumpTarget can surface as a broad object type;
-                        -- object-name classification is the most reliable first pass.
-                        if instanceof(thumpTarget, "IsoWindow") then
-                            window = thumpTarget
-                        elseif instanceof(thumpTarget, "IsoDoor") then
-                            door = thumpTarget
-                        elseif instanceof(thumpTarget, "IsoThumpable") then
-                            local okIsDoor, isDoor = pcall(function()
-                                return thumpTarget:isDoor()
-                            end)
-                            if okIsDoor and isDoor then
-                                door = thumpTarget
-                            end
-                        end
-
-                        if not window and not door then
-                            if instanceof(thumpTarget, "IsoWindow") then
-                                window = thumpTarget
-                            elseif instanceof(thumpTarget, "IsoDoor") or instanceof(thumpTarget, "IsoThumpable") then
-                                door = thumpTarget
-                            else
-                                local okThumpable, thumpable = pcall(function()
-                                    return thumpTarget:getThumpableFor(zombie)
-                                end)
-                                if okThumpable and thumpable then
-                                    if instanceof(thumpable, "IsoWindow") then
-                                        window = thumpable
-                                    else
-                                        door = thumpable
-                                    end
-                                end
-                            end
-                        end
-                    end
-                    if not window and not door then
-                        window, door = findAdjacentObstacle(zombie)
-                    end
+                    window, door = findAdjacentObstacle(zombie)
                     if window then
                         smashWindow(zombie, window)
                         data.lastSmashTick = tickCounter
