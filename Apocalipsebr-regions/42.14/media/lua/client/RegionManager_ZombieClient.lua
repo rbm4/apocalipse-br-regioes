@@ -19,7 +19,7 @@ local SpeedTracker = {
     count = 0,
     cursor = 0, -- current round-robin position (0-based)
     BATCH_SIZE = 1 -- one zombie checked per tick; revalidation is a
-                   -- background drift check, no need for bursts.
+    -- background drift check, no need for bursts.
 }
 
 --- Add a zombie to the speed tracker.
@@ -125,8 +125,12 @@ end
 local function clampInt(v, minV, maxV, default)
     local n = tonumber(v) or default
     n = math.floor(n)
-    if n < minV then return minV end
-    if n > maxV then return maxV end
+    if n < minV then
+        return minV
+    end
+    if n > maxV then
+        return maxV
+    end
     return n
 end
 
@@ -161,13 +165,15 @@ local LastPendingSweepEpoch = 0
 
 local DECISION_TTL_EPOCHS = clampInt(getRegionManagerSetting("DecisionCacheTtlEpochs", 300), 30, 3600, 300)
 local DECISION_SWEEP_EVERY_EPOCHS = clampInt(getRegionManagerSetting("DecisionCacheSweepEveryEpochs", 60), 5, 600, 60)
-local DECISION_SWEEP_MIN_AGE_EPOCHS = clampInt(getRegionManagerSetting("DecisionCacheSweepMinAgeEpochs", 30), 0, 1800, 30)
+local DECISION_SWEEP_MIN_AGE_EPOCHS = clampInt(getRegionManagerSetting("DecisionCacheSweepMinAgeEpochs", 30), 0, 1800,
+    30)
 local DECISION_COORD_MAX_DIST = clampInt(getRegionManagerSetting("DecisionCacheCoordMaxDist", 500), 50, 5000, 500)
 local DECISION_COORD_MAX_DIST2 = DECISION_COORD_MAX_DIST * DECISION_COORD_MAX_DIST
 local DECISION_MAX_ENTRIES = clampInt(getRegionManagerSetting("DecisionCacheMaxEntries", 256), 32, 4096, 256)
 
 local PENDING_CONFIRM_TTL_EPOCHS = clampInt(getRegionManagerSetting("PendingConfirmTtlEpochs", 90), 10, 900, 90)
-local PENDING_CONFIRM_SWEEP_EVERY_EPOCHS = clampInt(getRegionManagerSetting("PendingConfirmSweepEveryEpochs", 30), 5, 300, 30)
+local PENDING_CONFIRM_SWEEP_EVERY_EPOCHS = clampInt(getRegionManagerSetting("PendingConfirmSweepEveryEpochs", 30), 5,
+    300, 30)
 
 local function dropDecision(pid)
     if DecidedByPID[pid] ~= nil then
@@ -220,8 +226,7 @@ local function sweepPendingConfirmations()
 end
 
 local function runCacheHygiene()
-    if (DecisionEpoch - LastDecisionSweepEpoch) >= DECISION_SWEEP_EVERY_EPOCHS
-        or DecisionCount > DECISION_MAX_ENTRIES then
+    if (DecisionEpoch - LastDecisionSweepEpoch) >= DECISION_SWEEP_EVERY_EPOCHS or DecisionCount > DECISION_MAX_ENTRIES then
         sweepDecisionCache()
     end
     if (DecisionEpoch - LastPendingSweepEpoch) >= PENDING_CONFIRM_SWEEP_EVERY_EPOCHS then
@@ -252,13 +257,18 @@ local function zombieMatchesDecision(zombie, data)
     -- wrong, we need to re-apply.
     local modData = zombie:getModData()
     local tt = modData.Apocalipse_TSY_ToughnessType
-    if data.isTough and tt ~= "tough" then return false end
-    if data.isFragile and tt ~= "fragile" then return false end
-    if data.isNormalToughness and tt ~= "normal" then return false end
+    if data.isTough and tt ~= "tough" then
+        return false
+    end
+    if data.isFragile and tt ~= "fragile" then
+        return false
+    end
+    if data.isNormalToughness and tt ~= "normal" then
+        return false
+    end
 
     -- KillBonus stamp is cheap enough to verify presence
-    if (data.killBonusPrecomputed ~= nil or data.moduleId)
-       and modData.Apocalipse_TSY_KillBonus == nil then
+    if (data.killBonusPrecomputed ~= nil or data.moduleId) and modData.Apocalipse_TSY_KillBonus == nil then
         return false
     end
 
@@ -276,7 +286,7 @@ local function onZombieCreate(zombie)
     PendingZombies.count = PendingZombies.count + 1
     PendingZombies.queue[PendingZombies.count] = zombie
 end
-Events.OnZombieCreate.Add(onZombieCreate)
+-- Events.OnZombieCreate.Add(onZombieCreate)
 
 -- ============================================================================
 -- Decode compact bit-encoded payload from server (Protocol v2)
@@ -356,21 +366,25 @@ end
 -- application. Drained a few per tick to keep `makeInactive(true/false)` cost
 -- (the dominant FPS hit per zombie) spread across frames.
 -- ============================================================================
-local PendingApply = { queue = {}, head = 1, tail = 0 }
-local APPLY_PER_TICK = 1      -- normal steady-state drain rate
-local APPLY_BURST_ALLOW = 1   -- one-shot larger drain right after queue empties
+local PendingApply = {
+    queue = {},
+    head = 1,
+    tail = 0
+}
+local APPLY_PER_TICK = 1 -- normal steady-state drain rate
+local APPLY_BURST_ALLOW = 1 -- one-shot larger drain right after queue empties
 local pendingApplyBurstRemaining = APPLY_BURST_ALLOW
 
 local function enqueueApply(zombie, data, raw, moduleId, zombieID)
     PendingApply.tail = PendingApply.tail + 1
     PendingApply.queue[PendingApply.tail] = {
-        zombie   = zombie,
-        data     = data,
-        raw      = raw,
+        zombie = zombie,
+        data = data,
+        raw = raw,
         moduleId = moduleId,
         zombieID = zombieID,
         -- Cache the pid at enqueue time; zombie may be gone by drain time
-        pid      = RegionManager.Shared.GetZombiePersistentID(zombie),
+        pid = RegionManager.Shared.GetZombiePersistentID(zombie)
     }
 end
 
@@ -398,7 +412,7 @@ local function applyConfirmedZombie(entry)
             local maxHits = data.maxHits or RegionManager.Shared.DEFAULT_MAX_HITS
             initOpts = {
                 expectedToughness = {
-                    type    = "tough",
+                    type = "tough",
                     maxHits = maxHits
                 }
             }
@@ -418,12 +432,12 @@ local function applyConfirmedZombie(entry)
             DecisionCount = DecisionCount + 1
         end
         DecidedByPID[entry.pid] = {
-            data     = data,
-            raw      = entry.raw,
+            data = data,
+            raw = entry.raw,
             moduleId = entry.moduleId,
             lastEpoch = DecisionEpoch,
             lastX = zombie:getX(),
-            lastY = zombie:getY(),
+            lastY = zombie:getY()
         }
     end
 
@@ -454,7 +468,9 @@ local function drainPendingApply()
     end
     if pendingApplyBurstRemaining > 0 then
         pendingApplyBurstRemaining = pendingApplyBurstRemaining - processed
-        if pendingApplyBurstRemaining < 0 then pendingApplyBurstRemaining = 0 end
+        if pendingApplyBurstRemaining < 0 then
+            pendingApplyBurstRemaining = 0
+        end
     end
     -- Reset indices when fully drained to avoid unbounded index growth
     if PendingApply.head > PendingApply.tail then
@@ -492,9 +508,13 @@ local function processConfirmEntry(args)
     PendingConfirmations[persistentID] = nil
     PendingIDIndex[zombieID] = nil
 
-    if args.m then data.moduleId = args.m end
+    if args.m then
+        data.moduleId = args.m
+    end
     -- Server-precomputed killBonus (skips the 15-branch if-ladder in ServerSideProperties)
-    if args.k ~= nil then data.killBonusPrecomputed = args.k end
+    if args.k ~= nil then
+        data.killBonusPrecomputed = args.k
+    end
 
     enqueueApply(zombie, data, args.r, args.m, zombieID)
 end
@@ -519,7 +539,8 @@ local function Apocalipse_TSY_OnServerCommand(module, command, args)
         local isExhausted = args.isExhausted
         local zombieX = args.x
         local zombieY = args.y
-        RegionManager.Shared.ApplyToughZombieHit(zombieID, persistentID, hitCounter, maxHits, isExhausted, zombieX, zombieY)
+        RegionManager.Shared.ApplyToughZombieHit(zombieID, persistentID, hitCounter, maxHits, isExhausted, zombieX,
+            zombieY)
         return
     end
 
@@ -640,19 +661,21 @@ end
 -- iteration skips them without consuming the per-tick budget.
 -- ============================================================================
 
-local BATCH_FLUSH_SIZE        = 30
-local PROCESS_EVERY_N_TICKS   = 6   -- ~6 per second at PZ default ~6 TPS
-local FLUSH_TOLERANCE_TICKS   = 12   -- ~2 second grace after queue drains
+local BATCH_FLUSH_SIZE = 30
+local PROCESS_EVERY_N_TICKS = 6 -- ~6 per second at PZ default ~6 TPS
+local FLUSH_TOLERANCE_TICKS = 12 -- ~2 second grace after queue drains
 
 ---@type table[] accumulating proposal payloads across ticks
-local ProposalBatch           = {}
-local IdleTolerance           = 0   -- process-ticks elapsed with empty queue
-local ProcessTickCounter      = 0
+local ProposalBatch = {}
+local IdleTolerance = 0 -- process-ticks elapsed with empty queue
+local ProcessTickCounter = 0
 
 --- Dispatch the currently buffered proposals to the server (if any).
 local function flushProposalBatch(player)
     local n = #ProposalBatch
-    if n == 0 then return end
+    if n == 0 then
+        return
+    end
     sendClientCommand(player, "Apocalipse_TSY", "RequestZombieInfo", {
         zombies = ProposalBatch
     })
@@ -769,13 +792,8 @@ local function Apocalipse_TSY_ProcessPending()
                             -- Decision known, properties diverge: apply it
                             -- directly via the PendingApply drain. Still paced
                             -- one per tick via drainPendingApply.
-                            enqueueApply(
-                                zombie,
-                                cachedDecision.data,
-                                cachedDecision.raw,
-                                cachedDecision.moduleId,
-                                onlineID
-                            )
+                            enqueueApply(zombie, cachedDecision.data, cachedDecision.raw, cachedDecision.moduleId,
+                                onlineID)
                             queuePop(i)
                             -- Count as "processed" so the idle-flush tolerance
                             -- counter doesn't misfire a stale proposal batch.
@@ -819,7 +837,7 @@ local function Apocalipse_TSY_ProcessPending()
                                 x = zx,
                                 y = zy,
                                 onlineID = onlineID,
-                                createdEpoch = DecisionEpoch,
+                                createdEpoch = DecisionEpoch
                             }
                             PendingIDIndex[onlineID] = persistentID
 
@@ -874,15 +892,15 @@ end
 -- later pass with safer pacing.
 -- ============================================================================
 
-Events.OnTick.Add(function()
-    ProcessTickCounter = ProcessTickCounter + 1
-    if ProcessTickCounter < PROCESS_EVERY_N_TICKS then
-        return
-    end
-    ProcessTickCounter = 0
-    Apocalipse_TSY_ProcessPending()
-    drainPendingApply()
-end)
+-- Events.OnTick.Add(function()
+--     ProcessTickCounter = ProcessTickCounter + 1
+--     if ProcessTickCounter < PROCESS_EVERY_N_TICKS then
+--         return
+--     end
+--     ProcessTickCounter = 0
+--     Apocalipse_TSY_ProcessPending()
+--     drainPendingApply()
+-- end)
 
 -- ============================================================================
 -- Zombie death handler

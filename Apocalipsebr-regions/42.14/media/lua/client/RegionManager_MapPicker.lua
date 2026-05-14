@@ -23,6 +23,14 @@ local function T(key)
     return getText("UI_RMMP_" .. key)
 end
 
+local function toInt(value)
+    value = tonumber(value)
+    if value == nil then
+        return nil
+    end
+    return math.floor(value)
+end
+
 -- ============================================================================
 -- Main Map Picker Panel
 -- ============================================================================
@@ -610,22 +618,24 @@ function ISRegionMapPicker:render()
     elseif self.point1 and self:isMouseOverMap() then
         -- Live preview: draw rectangle from point1 to mouse cursor
         local api2 = self.worldMap:getAPIv1()
-        local mouseWorldX = api2:mouseToWorldX()
-        local mouseWorldY = api2:mouseToWorldY()
+        local mouseWorldX = toInt(api2:mouseToWorldX())
+        local mouseWorldY = toInt(api2:mouseToWorldY())
 
-        local p1uiX = api:worldToUIX(self.point1.x, self.point1.y) + self.mapX
-        local p1uiY = api:worldToUIY(self.point1.x, self.point1.y) + self.mapY
-        local mUiX = api:worldToUIX(mouseWorldX, mouseWorldY) + self.mapX
-        local mUiY = api:worldToUIY(mouseWorldX, mouseWorldY) + self.mapY
+        if mouseWorldX and mouseWorldY then
+            local p1uiX = api:worldToUIX(self.point1.x, self.point1.y) + self.mapX
+            local p1uiY = api:worldToUIY(self.point1.x, self.point1.y) + self.mapY
+            local mUiX = api:worldToUIX(mouseWorldX, mouseWorldY) + self.mapX
+            local mUiY = api:worldToUIY(mouseWorldX, mouseWorldY) + self.mapY
 
-        local rx = math.min(p1uiX, mUiX)
-        local ry = math.min(p1uiY, mUiY)
-        local rw = math.abs(mUiX - p1uiX)
-        local rh = math.abs(mUiY - p1uiY)
+            local rx = math.min(p1uiX, mUiX)
+            local ry = math.min(p1uiY, mUiY)
+            local rw = math.abs(mUiX - p1uiX)
+            local rh = math.abs(mUiY - p1uiY)
 
-        -- Semi-transparent yellow preview
-        self:drawMapClippedRect(rx, ry, rw, rh, 0.12, 1, 1, 0)
-        self:drawMapClippedRectBorder(rx, ry, rw, rh, 0.5, 1, 1, 0)
+            -- Semi-transparent yellow preview
+            self:drawMapClippedRect(rx, ry, rw, rh, 0.12, 1, 1, 0)
+            self:drawMapClippedRectBorder(rx, ry, rw, rh, 0.5, 1, 1, 0)
+        end
     end
 
     -- Draw map border on top of everything
@@ -634,18 +644,20 @@ function ISRegionMapPicker:render()
     -- Update coordinate label with mouse position
     if self:isMouseOverMap() then
         local api3 = self.worldMap:getAPIv1()
-        local mwx = api3:mouseToWorldX()
-        local mwy = api3:mouseToWorldY()
-        local coordText = getText("UI_RMMP_CoordMouse", math.floor(mwx), math.floor(mwy))
-        if self.point1 then
-            coordText = coordText .. "  |  " ..
-                            getText("UI_RMMP_CoordPoint1", math.floor(self.point1.x), math.floor(self.point1.y))
+        local mwx = toInt(api3:mouseToWorldX())
+        local mwy = toInt(api3:mouseToWorldY())
+        if mwx and mwy then
+            local coordText = getText("UI_RMMP_CoordMouse", mwx, mwy)
+            if self.point1 then
+                coordText = coordText .. "  |  " ..
+                                getText("UI_RMMP_CoordPoint1", toInt(self.point1.x), toInt(self.point1.y))
+            end
+            if self.point2 then
+                coordText = coordText .. "  |  " ..
+                                getText("UI_RMMP_CoordPoint2", toInt(self.point2.x), toInt(self.point2.y))
+            end
+            self.coordLabel:setName(coordText)
         end
-        if self.point2 then
-            coordText = coordText .. "  |  " ..
-                            getText("UI_RMMP_CoordPoint2", math.floor(self.point2.x), math.floor(self.point2.y))
-        end
-        self.coordLabel:setName(coordText)
     end
 end
 
@@ -759,8 +771,12 @@ end
 
 function ISRegionMapPicker:handleMapClick()
     local api = self.worldMap:getAPIv1()
-    local worldX = api:mouseToWorldX()
-    local worldY = api:mouseToWorldY()
+    local worldX = toInt(api:mouseToWorldX())
+    local worldY = toInt(api:mouseToWorldY())
+
+    if worldX == nil or worldY == nil then
+        return
+    end
 
     if self.selectionState == STATE_PICK_FIRST then
         self.point1 = {

@@ -155,11 +155,27 @@ local function isWindowLike(obj)
 end
 
 -- applyForcedThumpDamage:
--- 1. Check if this door has a barricade facing the zombie. If so, force its HP
---    down and then call Thump() so vanilla removal/state-change logic still runs.
--- 2. Otherwise force HP reduction on the door itself + sync, then call
---    Thump() to preserve vanilla break/destruction flow and sounds.
+-- 1. Check if this door has a barricade facing the zombie. If so, apply Damage()
+--    so vanilla sync/removal logic runs. Thump() is pcall-guarded for sounds only.
+-- 2. For IsoThumpable (furniture/walls): use Damage(). Thump() is pcall-guarded.
+-- 3. For IsoDoor: use setHealth() / Damage() and NEVER call Thump(zombie) directly.
+--    IsoDoor.Thump with cognition==1 zombies calls ToggleDoor->ToggleDoorActual
+--    which NPEs on player.isLocalPlayer() when thumper is not an IsoPlayer.
+--    Instead we manually call destroy() when health reaches zero.
 local FORCE_DAMAGE = 24
+
+-- Attempt to destroy a door if its health is at or below zero.
+local function destroyIfDead(doorObj)
+    local okHp, curHp = pcall(function()
+        return doorObj:getHealth()
+    end)
+    if okHp and tonumber(curHp) and tonumber(curHp) <= 0 then
+        debugPrint("[ForceDoorThump] health<=0, calling destroy()")
+        pcall(function()
+            doorObj:destroy()
+        end)
+    end
+end
 
 local function applyForcedThumpDamage(doorObj, thumper)
     -- getThumpableFor redirects to a barricade if one is blocking this zombie.
@@ -170,34 +186,88 @@ local function applyForcedThumpDamage(doorObj, thumper)
     if ok and thumpable and instanceof(thumpable, "IsoBarricade") then
         local before = tonumber(thumpable:getHealth()) or 0
         local maxHp = tonumber(thumpable:getMaxHealth()) or 0
-        local after = before - FORCE_DAMAGE
 
-        -- Keep 1 HP when this hit should destroy the barricade so the
-        -- follow-up Thump() can still run vanilla destruction/removal logic.
-        if after <= 0 then
-            thumpable:setHealth(1)
-        else
-            thumpable:setHealth(after)
+        -- Damage() handles sync + sprite update internally on the server.
+        local okDamage = pcall(function()
+            thumpable:Damage(FORCE_DAMAGE)
+        end)
+        if not okDamage then
+            local after = before - FORCE_DAMAGE
+            pcall(function()
+                thumpable:setHealth(math.max(after, 0))
+            end)
+            pcall(function()
+                thumpable:sync()
+            end)
         end
-        thumpable:sync()
+
         debugPrint(
             "[ForceDoorThump] barricade damage " .. tostring(FORCE_DAMAGE) .. " hp " .. tostring(before) .. "/" ..
                 tostring(maxHp) .. " -> " .. tostring(thumpable:getHealth()) .. "/" .. tostring(maxHp))
 
-        -- Preserve vanilla break/destruction path and sounds.
-        thumpable:Thump(thumper)
+        -- Thump for sounds/render effects only; pcall-guard since we already did damage.
+        pcall(function()
+            thumpable:Thump(thumper)
+        end)
         return
     end
 
-    -- No barricade: try forced HP path for doors. If this object doesn't
-    -- expose door-style setters (e.g. some windows), fall back to vanilla Thump.
+    -- No barricade: in 42.18, door-like objects can be IsoDoor or IsoThumpable.
+
+    if instanceof(doorObj, "IsoThumpable") then
+        local okBefore, beforeRaw = pcall(function()
+            return doorObj:getHealth()
+        end)
+        local before = okBefore and tonumber(beforeRaw) or nil
+        local okMax, maxRaw = pcall(function()
+            return doorObj:getMaxHealth()
+        end)
+        local maxHp = okMax and tonumber(maxRaw) or nil
+
+        -- Damage() on IsoThumpable handles health + sync + destruction internally.
+        local okDamage = pcall(function()
+            doorObj:Damage(FORCE_DAMAGE)
+        end)
+        if not okDamage then
+            debugPrint("[ForceDoorThump] IsoThumpable Damage() unavailable; skipping")
+            return
+        end
+
+        local okAfter, afterRaw = pcall(function()
+            return doorObj:getHealth()
+        end)
+        local after = okAfter and tonumber(afterRaw) or nil
+        debugPrint("[ForceDoorThump] thumpable damage " .. tostring(FORCE_DAMAGE) .. " hp " ..
+                       tostring(before or "n/a") .. "/" .. tostring(maxHp or "n/a") .. " -> " ..
+                       tostring(after or "n/a") .. "/" .. tostring(maxHp or "n/a"))
+
+        -- Thump for sounds/render; pcall-guard since damage is already applied.
+        pcall(function()
+            doorObj:Thump(thumper)
+        end)
+        return
+    end
+
+    if not instanceof(doorObj, "IsoDoor") then
+        -- Unknown type: pcall-guard Thump to avoid unhandled crashes.
+        debugPrint("[ForceDoorThump] unsupported object type; attempting pcall Thump")
+        local okThump = pcall(function()
+            doorObj:Thump(thumper)
+        end)
+        if not okThump then
+            debugPrint("[ForceDoorThump] pcall Thump failed; giving up")
+        end
+        return
+    end
+
+    -- IsoDoor path. DO NOT call Thump(zombie) here: IsoDoor.Thump with a
+    -- cognition==1 zombie calls ToggleDoorActual which NPEs on player.isLocalPlayer().
     local okBefore, beforeRaw = pcall(function()
         return doorObj:getHealth()
     end)
     local before = okBefore and tonumber(beforeRaw) or nil
     if not before then
-        debugPrint("[ForceDoorThump] object has no getHealth; using vanilla Thump")
-        doorObj:Thump(thumper)
+        debugPrint("[ForceDoorThump] IsoDoor has no getHealth; skipping")
         return
     end
 
@@ -211,8 +281,12 @@ local function applyForcedThumpDamage(doorObj, thumper)
         doorObj:setHealth(after)
     end)
     if not okSet then
-        debugPrint("[ForceDoorThump] object has no setHealth; using vanilla Thump")
-        doorObj:Thump(thumper)
+        okSet = pcall(function()
+            doorObj:Damage(FORCE_DAMAGE)
+        end)
+    end
+    if not okSet then
+        debugPrint("[ForceDoorThump] IsoDoor: no setHealth or Damage available; skipping")
         return
     end
 
@@ -223,8 +297,8 @@ local function applyForcedThumpDamage(doorObj, thumper)
     debugPrint("[ForceDoorThump] door damage " .. tostring(FORCE_DAMAGE) .. " hp " .. tostring(before) .. "/" ..
                    tostring(maxHp or "n/a") .. " -> " .. tostring(after) .. "/" .. tostring(maxHp or "n/a"))
 
-    -- Preserve vanilla break/destruction path and sounds.
-    doorObj:Thump(thumper)
+    -- Destruction check: no Thump() on IsoDoor with zombie; call destroy() manually.
+    destroyIfDead(doorObj)
 end
 local function Apocalipse_TSY_OnClientCommand(module, command, player, args)
     if module ~= "Apocalipse_TSY" then
@@ -581,7 +655,7 @@ Events.OnInitWorld.Add(function()
         debugPrint("Apocalipse_TSY Server: Zombie settings initialized - Manual sprinter conversion enabled")
     end
 
-    -- Completely remove persisted ModData so nothing survives a restart
+    -- Completely re persisted ModData so nothing survives a restart
     if ModData.exists("Apocalipse_TSY_ZombieStates") then
         ModData.remove("Apocalipse_TSY_ZombieStates")
     end
@@ -613,3 +687,127 @@ local function RegionManagerZombie_OnZombieDead(zombie)
 end
 
 Events.OnZombieDead.Add(RegionManagerZombie_OnZombieDead)
+
+-- Apply server-side zombie properties from the rolled decision table.
+-- Values mirror IsoZombie.DoZombieStats() conventions where possible.
+---@param zombie IsoZombie
+---@param data table
+local function applyDecisionsToZombie(zombie, data)
+    if not zombie or not data then
+        return
+    end
+
+    local modData = zombie:getModData()
+
+    -- Speed (42.18+ public methods)
+    if data.isSprinter then
+        zombie:doSprinter()
+        modData.Apocalipse_TSY_ExpectedSpeed = "sprinter"
+    elseif data.isShambler then
+        zombie:doShambler()
+        modData.Apocalipse_TSY_ExpectedSpeed = "shambler"
+    end
+
+    -- Cognition: 1 = navigate/use doors, 0 = no navigation
+    if data.hasNavigation then
+        zombie.cognition = 1
+    else
+        zombie.cognition = 0
+    end
+
+    -- Sight: 1 eagle, 2 normal, 3 poor
+    if data.hawkVision then
+        zombie.sight = 1
+    elseif data.normalVision then
+        zombie.sight = 2
+    elseif data.poorVision or data.badVision then
+        zombie.sight = 3
+    elseif data.randomVision then
+        zombie.sight = ZombRand(3) + 1
+    end
+
+    -- Hearing: 1 pinpoint, 2 normal, 3 poor
+    if data.pinpointHearing or data.goodHearing then
+        zombie.hearing = 1
+    elseif data.normalHearing then
+        zombie.hearing = 2
+    elseif data.poorHearing or data.badHearing then
+        zombie.hearing = 3
+    elseif data.randomHearing then
+        zombie.hearing = ZombRand(3) + 1
+    end
+
+    -- Strength mirrors vanilla buckets (superhuman=5, normal=3, weak=1).
+    if data.isSuperhuman then
+        zombie.strength = 5
+    elseif data.isNormalToughness2 or data.isNormalToughness then
+        zombie.strength = 3
+    elseif data.isWeak then
+        zombie.strength = 1
+    elseif data.isRandomToughness2 then
+        zombie.strength = ZombRand(4) + 1
+    end
+
+    -- Memory duration values from IsoZombie.DoZombieStats().
+    if data.hasMemoryLong then
+        zombie.memory = 1250
+    elseif data.hasMemoryNormal then
+        zombie.memory = 800
+    elseif data.hasMemoryShort then
+        zombie.memory = 500
+    elseif data.hasMemoryNone then
+        zombie.memory = 25
+    elseif data.hasMemoryRandom then
+        local idx = ZombRand(4)
+        if idx == 0 then
+            zombie.memory = 1250
+        elseif idx == 1 then
+            zombie.memory = 800
+        elseif idx == 2 then
+            zombie.memory = 500
+        else
+            zombie.memory = 25
+        end
+    end
+
+    -- Toughness: health values aligned with vanilla toughness tiers.
+    if not zombie:getAttackedBy() and not zombie:isOnFire() then
+        if data.isTough then
+            zombie:setHealth(3.5 + (ZombRand(4) * 0.1))
+        elseif data.isNormalToughness then
+            zombie:setHealth(1.8 + (ZombRand(4) * 0.1))
+        elseif data.isFragile then
+            zombie:setHealth(0.5 + (ZombRand(4) * 0.1))
+        elseif data.isRandomToughness then
+            zombie:setHealth(0.5 + (ZombRand(3001) / 1000.0) + (ZombRand(301) / 1000.0))
+        end
+    end
+
+    -- Keep existing modData contract for downstream systems.
+    if data.isTough then
+        modData.Apocalipse_TSY_ToughnessType = "tough"
+        modData.Apocalipse_TSY_ToughnessHitCounter = 0
+        modData.Apocalipse_TSY_ToughnessMaxHits = data.maxHits or RegionManager.Shared.DEFAULT_MAX_HITS
+    elseif data.isFragile then
+        modData.Apocalipse_TSY_ToughnessType = "fragile"
+    elseif data.isNormalToughness then
+        modData.Apocalipse_TSY_ToughnessType = "normal"
+    end
+
+    if data.isResistant then
+        modData.Apocalipse_TSY_Resistant = true
+    end
+end
+
+local function onZombieCreate(zombie)
+    if not zombie then
+        return
+    end
+    local zx, zy = zombie:getX(), zombie:getY()
+    local decisions = RegionManagerZombie_OnZombieCreate(RegionManager.Shared.GetZombiePersistentID(zombie), zx, zy)
+    debugPrint("onCreateZombie called: " + zombie:getOnlineID())
+    if decisions then
+        applyDecisionsToZombie(zombie, decisions)
+    end
+end
+Events.OnZombieCreate.Add(onZombieCreate)
