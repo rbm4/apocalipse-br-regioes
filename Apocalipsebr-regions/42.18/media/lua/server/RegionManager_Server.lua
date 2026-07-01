@@ -183,13 +183,20 @@ local function registerRegion(region)
         -- Invalidate cached client payload: contents changed.
         RegionManager.Server._cachedBoundariesPayload = nil
 
-        -- Create NonPvpZone for safe zones (pvpEnabled = false)
-        -- SafetySystemManager automatically detects NonPvpZone and manages Safety state
-        -- if props.pvpEnabled == false then
-        --     local zoneName = "SafeZone_" .. region.id
-        --     NonPvpZone.addNonPvpZone(zoneName, minX, minY, maxX, maxY)
-        --     log("Created NonPvpZone: " .. zoneName .. " - SafetySystemManager will auto-manage this zone")
-        -- end
+        -- Create NonPvpZone for safe zones (pvpEnabled = false).
+        -- In B42.19 PlayerHitPlayerPacket runs AntiCheatSafety before the
+        -- hit packet is broadcast, so native NonPvpZone is the earliest
+        -- server-side PvP veto point available from Lua.
+        if props.pvpEnabled == false then
+            local zoneName = "SafeZone_" .. region.id
+            -- NonPvpZone uses exclusive x2/y2 checks; RegionManager bounds are inclusive.
+            local ok, err = pcall(NonPvpZone.addNonPvpZone, zoneName, minX, minY, maxX + 1, maxY + 1)
+            if ok then
+                log("Created NonPvpZone: " .. zoneName .. " - native PvP packets will be blocked in this zone")
+            else
+                log("Could not create NonPvpZone " .. zoneName .. ": " .. tostring(err))
+            end
+        end
 
         return true
     else
