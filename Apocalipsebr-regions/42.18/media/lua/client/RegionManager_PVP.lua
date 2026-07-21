@@ -105,7 +105,7 @@ local function onTick(player, currentZones)
 
     local playerNum = player:getPlayerNum()
     local requiredState = RequiredSafetyState[playerNum]
-    local isFlagged = isPlayerFlagged(playerNum)
+    -- local isFlagged = isPlayerFlagged(playerNum)
 
     -- Only enforce if we have a required state
     if requiredState ~= nil then
@@ -116,54 +116,48 @@ local function onTick(player, currentZones)
         if currentState ~= requiredState then
 
             -- Track this toggle attempt
-            local isAbusing = trackToggleAttempt(player)
-
-            -- Flag player if they're abusing the system
-            if isAbusing and not isFlagged then
-                player:Say("Abuso de Toogle detectado! Seu status PVP foi travado. Aguarde.")
-                flagPlayer(playerNum)
-                isFlagged = true
-            end
+            -- local isAbusing = trackToggleAttempt(player)
 
             -- Revert the toggle
             player:getSafety():setCooldown(0)
             player:getSafety():toggleSafety()
+            player:getSafety():setCooldown(1500)
 
             -- Sync the corrected state with the server
-            sendClientCommand("RegionManager", "UpdatePvpState", {
-                zoneId = nil,
-                zoneName = "State Correction",
-                isPvpZone = (requiredState == false),
-                isSafeZone = (requiredState == true),
-                safetyEnabled = requiredState
-            })
+            -- sendClientCommand("RegionManager", "UpdatePvpState", {
+            --     zoneId = nil,
+            --     zoneName = "State Correction",
+            --     isPvpZone = (requiredState == false),
+            --     isSafeZone = (requiredState == true),
+            --     safetyEnabled = requiredState
+            -- })
 
-            if isFlagged then
-                log(
-                    " FLAGGED player " .. playerNum .. " - State forcibly corrected (Safety=" .. tostring(requiredState) ..
-                        ")")
-            else
-                log("State corrected and synced with server (Safety=" .. tostring(requiredState) .. ")")
-            end
+            -- if isFlagged then
+            --     log(
+            --         " FLAGGED player " .. playerNum .. " - State forcibly corrected (Safety=" .. tostring(requiredState) ..
+            --             ")")
+            -- else
+            --     log("State corrected and synced with server (Safety=" .. tostring(requiredState) .. ")")
+            -- end
         end
 
         -- If player is flagged, continuously enforce state and increment punishment counter
-        if isFlagged then
-            local flagData = FlaggedPlayers[playerNum]
-            flagData.totalTicks = flagData.totalTicks + 1
-            -- Force the correct state every tick during punishment
-            if player:getSafety():isEnabled() ~= requiredState then
-                player:getSafety():toggleSafety()
-            end
-            player:getSafety():setCooldown(500 - flagData.totalTicks)
+        -- if isFlagged then
+            --    local flagData = FlaggedPlayers[playerNum]
+            --    flagData.totalTicks = flagData.totalTicks + 1
+        --     -- Force the correct state every tick during punishment
+        --     if player:getSafety():isEnabled() ~= requiredState then
+        --         player:getSafety():toggleSafety()
+        --     end
+            -- player:getSafety():setCooldown(500 - flagData.totalTicks)
 
             -- Log progress every 100 ticks
-            if flagData.totalTicks % 100 == 0 then
-                local remaining = PUNISHMENT_DURATION - flagData.totalTicks
-                log(" Player " .. playerNum .. " punishment: " .. flagData.totalTicks .. "/" .. PUNISHMENT_DURATION ..
-                        " ticks (" .. remaining .. " remaining)")
-            end
-        end
+            -- if flagData.totalTicks % 100 == 0 then
+            --     local remaining = PUNISHMENT_DURATION - flagData.totalTicks
+            --     log(" Player " .. playerNum .. " punishment: " .. flagData.totalTicks .. "/" .. PUNISHMENT_DURATION ..
+            --             " ticks (" .. remaining .. " remaining)")
+            -- end
+        -- end
     end
 end
 
@@ -225,13 +219,13 @@ local function onZoneEntered(player, zoneId, zoneData)
     end
 
     -- Notify server to broadcast this player's PVP state to other clients
-    sendClientCommand("RegionManager", "UpdatePvpState", {
-        zoneId = zoneId,
-        zoneName = zoneData.name,
-        isPvpZone = isPvpZone,
-        isSafeZone = isSafeZone,
-        safetyEnabled = player:getSafety():isEnabled()
-    })
+    -- sendClientCommand("RegionManager", "UpdatePvpState", {
+    --     zoneId = zoneId,
+    --     zoneName = zoneData.name,
+    --     isPvpZone = isPvpZone,
+    --     isSafeZone = isSafeZone,
+    --     safetyEnabled = player:getSafety():isEnabled()
+    -- })
 
     log("Sent PVP state update to server for zone: " .. zoneData.name)
 end

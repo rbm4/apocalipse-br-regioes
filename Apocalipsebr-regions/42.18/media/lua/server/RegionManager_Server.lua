@@ -414,6 +414,254 @@ local function exportConfig()
     end
 end
 
+local function deleteHotRegion(player, args)
+    if player:getAccessLevel() == "None" then
+        log("WARNING: Non-admin player " .. player:getUsername() .. " tried to delete a region")
+        sendServerCommand(player, "RegionManager", "RegionDeleteFailed", {
+            reason = "Admin access required"
+        })
+        return
+    end
+
+    local originalId = args.originalId
+    if not originalId or originalId == "" then
+        sendServerCommand(player, "RegionManager", "RegionDeleteFailed", {
+            reason = "Original region ID is required"
+        })
+        return
+    end
+
+    local currentRegions = loadRegionsFromFile()
+    local targetIndex = nil
+    local deletedRegion = nil
+    for idx, existing in ipairs(currentRegions) do
+        if existing.id == originalId then
+            targetIndex = idx
+            deletedRegion = existing
+            break
+        end
+    end
+
+    if not targetIndex then
+        sendServerCommand(player, "RegionManager", "RegionDeleteFailed", {
+            reason = "Region '" .. originalId .. "' not found"
+        })
+        return
+    end
+
+    table.remove(currentRegions, targetIndex)
+
+    local writeOk = writeRegionsFile(currentRegions)
+    if not writeOk then
+        sendServerCommand(player, "RegionManager", "RegionDeleteFailed", {
+            reason = "Failed to write regions file"
+        })
+        return
+    end
+
+    log("Region '" .. originalId .. "' deleted by " .. player:getUsername() .. ", re-initializing all zones...")
+    registerAllRegions()
+
+    local payload = buildZoneBoundariesPayload()
+    RegionManager.Server._cachedBoundariesPayload = payload
+    local allPlayers = getOnlinePlayers()
+    for i = 0, allPlayers:size() - 1 do
+        local p = allPlayers:get(i)
+        sendServerCommand(p, "RegionManager", "AllZoneBoundaries", payload)
+    end
+
+    sendServerCommand(player, "RegionManager", "RegionDeleted", {
+        id = originalId,
+        name = deletedRegion and deletedRegion.name or originalId
+    })
+    log("Region '" .. originalId .. "' successfully deleted and broadcast to " .. allPlayers:size() .. " players")
+
+end
+
+local function updateHotRegion(player, args)
+    if player:getAccessLevel() == "None" then
+        log("WARNING: Non-admin player " .. player:getUsername() .. " tried to update a region")
+        sendServerCommand(player, "RegionManager", "RegionUpdateFailed", {
+            reason = "Admin access required"
+        })
+        return
+    end
+
+    local originalId = args.originalId
+    local id = args.id
+    local name = args.name
+    if not originalId or originalId == "" then
+        sendServerCommand(player, "RegionManager", "RegionUpdateFailed", {
+            reason = "Original region ID is required"
+        })
+        return
+    end
+    if not id or id == "" or not name or name == "" then
+        sendServerCommand(player, "RegionManager", "RegionUpdateFailed", {
+            reason = "Region ID and name are required"
+        })
+        return
+    end
+    if not args.x1 or not args.y1 or not args.x2 or not args.y2 then
+        sendServerCommand(player, "RegionManager", "RegionUpdateFailed", {
+            reason = "All four coordinates are required"
+        })
+        return
+    end
+
+    local currentRegions = loadRegionsFromFile()
+    local targetIndex = nil
+    for idx, existing in ipairs(currentRegions) do
+        if existing.id == originalId then
+            targetIndex = idx
+            break
+        end
+    end
+
+    if not targetIndex then
+        sendServerCommand(player, "RegionManager", "RegionUpdateFailed", {
+            reason = "Region '" .. originalId .. "' not found"
+        })
+        return
+    end
+
+    for idx, existing in ipairs(currentRegions) do
+        if idx ~= targetIndex and existing.id == id then
+            sendServerCommand(player, "RegionManager", "RegionUpdateFailed", {
+                reason = "Region ID '" .. id .. "' already exists"
+            })
+            return
+        end
+    end
+
+    currentRegions[targetIndex] = {
+        id = id,
+        name = name,
+        x1 = args.x1,
+        y1 = args.y1,
+        x2 = args.x2,
+        y2 = args.y2,
+        z = args.z or 0,
+        enabled = args.enabled ~= false,
+        categories = args.categories or {},
+        customProperties = args.customProperties or {}
+    }
+
+    local writeOk = writeRegionsFile(currentRegions)
+    if not writeOk then
+        sendServerCommand(player, "RegionManager", "RegionUpdateFailed", {
+            reason = "Failed to write regions file"
+        })
+        return
+    end
+
+    log("Region '" .. originalId .. "' updated by " .. player:getUsername() .. ", re-initializing all zones...")
+    registerAllRegions()
+
+    local payload = buildZoneBoundariesPayload()
+    RegionManager.Server._cachedBoundariesPayload = payload
+    local allPlayers = getOnlinePlayers()
+    for i = 0, allPlayers:size() - 1 do
+        local p = allPlayers:get(i)
+        sendServerCommand(p, "RegionManager", "AllZoneBoundaries", payload)
+    end
+
+    sendServerCommand(player, "RegionManager", "RegionUpdated", {
+        id = id,
+        name = name,
+        originalId = originalId
+    })
+    log("Region '" .. originalId .. "' successfully updated (new id='" .. id .. "') and broadcast to " ..
+            allPlayers:size() .. " players")
+
+end
+local function addHotRegion(player, args)
+    -- Admin command to add a new region live
+    if player:getAccessLevel() == "None" then
+        log("WARNING: Non-admin player " .. player:getUsername() .. " tried to add a region")
+        sendServerCommand(player, "RegionManager", "RegionAddFailed", {
+            reason = "Admin access required"
+        })
+        return
+    end
+
+    -- Validate required fields
+    local id = args.id
+    local name = args.name
+    if not id or id == "" or not name or name == "" then
+        sendServerCommand(player, "RegionManager", "RegionAddFailed", {
+            reason = "Region ID and name are required"
+        })
+        return
+    end
+    if not args.x1 or not args.y1 or not args.x2 or not args.y2 then
+        sendServerCommand(player, "RegionManager", "RegionAddFailed", {
+            reason = "All four coordinates are required"
+        })
+        return
+    end
+
+    -- Load current regions from file
+    local currentRegions = loadRegionsFromFile()
+
+    -- Check for duplicate ID
+    for _, existing in ipairs(currentRegions) do
+        if existing.id == id then
+            sendServerCommand(player, "RegionManager", "RegionAddFailed", {
+                reason = "Region ID '" .. id .. "' already exists"
+            })
+            return
+        end
+    end
+
+    -- Build new region definition
+    local newRegion = {
+        id = id,
+        name = name,
+        x1 = args.x1,
+        y1 = args.y1,
+        x2 = args.x2,
+        y2 = args.y2,
+        z = args.z or 0,
+        enabled = args.enabled ~= false,
+        categories = args.categories or {},
+        customProperties = args.customProperties or {}
+    }
+
+    -- Append and save to file
+    table.insert(currentRegions, newRegion)
+    local writeOk = writeRegionsFile(currentRegions)
+    if not writeOk then
+        sendServerCommand(player, "RegionManager", "RegionAddFailed", {
+            reason = "Failed to write regions file"
+        })
+        return
+    end
+
+    log("Region '" .. id .. "' added by " .. player:getUsername() .. ", re-initializing all zones...")
+
+    -- Hot-swap: re-run full initialization (cleanup + reload + register)
+    registerAllRegions()
+
+    -- Broadcast updated zone boundaries to ALL connected players
+    local payload = buildZoneBoundariesPayload()
+    RegionManager.Server._cachedBoundariesPayload = payload
+
+    local allPlayers = getOnlinePlayers()
+    for i = 0, allPlayers:size() - 1 do
+        local p = allPlayers:get(i)
+        sendServerCommand(p, "RegionManager", "AllZoneBoundaries", payload)
+    end
+
+    -- Confirm to the requesting admin
+    sendServerCommand(player, "RegionManager", "RegionAdded", {
+        id = id,
+        name = name
+    })
+    log("Region '" .. id .. "' successfully added and broadcast to " .. allPlayers:size() .. " players")
+
+end
+
 -- Handle server commands
 ---@param module string
 ---@param command string
@@ -519,248 +767,11 @@ local function OnClientCommand(module, command, player, args)
         -- print("[DEBUG SERVER] Broadcasted zone exit to " .. (allPlayers:size() - 1) .. " other players")
 
     elseif command == "AddRegion" then
-        -- Admin command to add a new region live
-        if player:getAccessLevel() == "None" then
-            log("WARNING: Non-admin player " .. player:getUsername() .. " tried to add a region")
-            sendServerCommand(player, "RegionManager", "RegionAddFailed", {
-                reason = "Admin access required"
-            })
-            return
-        end
-
-        -- Validate required fields
-        local id = args.id
-        local name = args.name
-        if not id or id == "" or not name or name == "" then
-            sendServerCommand(player, "RegionManager", "RegionAddFailed", {
-                reason = "Region ID and name are required"
-            })
-            return
-        end
-        if not args.x1 or not args.y1 or not args.x2 or not args.y2 then
-            sendServerCommand(player, "RegionManager", "RegionAddFailed", {
-                reason = "All four coordinates are required"
-            })
-            return
-        end
-
-        -- Load current regions from file
-        local currentRegions = loadRegionsFromFile()
-
-        -- Check for duplicate ID
-        for _, existing in ipairs(currentRegions) do
-            if existing.id == id then
-                sendServerCommand(player, "RegionManager", "RegionAddFailed", {
-                    reason = "Region ID '" .. id .. "' already exists"
-                })
-                return
-            end
-        end
-
-        -- Build new region definition
-        local newRegion = {
-            id = id,
-            name = name,
-            x1 = args.x1,
-            y1 = args.y1,
-            x2 = args.x2,
-            y2 = args.y2,
-            z = args.z or 0,
-            enabled = args.enabled ~= false,
-            categories = args.categories or {},
-            customProperties = args.customProperties or {}
-        }
-
-        -- Append and save to file
-        table.insert(currentRegions, newRegion)
-        local writeOk = writeRegionsFile(currentRegions)
-        if not writeOk then
-            sendServerCommand(player, "RegionManager", "RegionAddFailed", {
-                reason = "Failed to write regions file"
-            })
-            return
-        end
-
-        log("Region '" .. id .. "' added by " .. player:getUsername() .. ", re-initializing all zones...")
-
-        -- Hot-swap: re-run full initialization (cleanup + reload + register)
-        registerAllRegions()
-
-        -- Broadcast updated zone boundaries to ALL connected players
-        local payload = buildZoneBoundariesPayload()
-        RegionManager.Server._cachedBoundariesPayload = payload
-
-        local allPlayers = getOnlinePlayers()
-        for i = 0, allPlayers:size() - 1 do
-            local p = allPlayers:get(i)
-            sendServerCommand(p, "RegionManager", "AllZoneBoundaries", payload)
-        end
-
-        -- Confirm to the requesting admin
-        sendServerCommand(player, "RegionManager", "RegionAdded", {
-            id = id,
-            name = name
-        })
-        log("Region '" .. id .. "' successfully added and broadcast to " .. allPlayers:size() .. " players")
-
+        addHotRegion(player, args)
     elseif command == "UpdateRegion" then
-        if player:getAccessLevel() == "None" then
-            log("WARNING: Non-admin player " .. player:getUsername() .. " tried to update a region")
-            sendServerCommand(player, "RegionManager", "RegionUpdateFailed", {
-                reason = "Admin access required"
-            })
-            return
-        end
-
-        local originalId = args.originalId
-        local id = args.id
-        local name = args.name
-        if not originalId or originalId == "" then
-            sendServerCommand(player, "RegionManager", "RegionUpdateFailed", {
-                reason = "Original region ID is required"
-            })
-            return
-        end
-        if not id or id == "" or not name or name == "" then
-            sendServerCommand(player, "RegionManager", "RegionUpdateFailed", {
-                reason = "Region ID and name are required"
-            })
-            return
-        end
-        if not args.x1 or not args.y1 or not args.x2 or not args.y2 then
-            sendServerCommand(player, "RegionManager", "RegionUpdateFailed", {
-                reason = "All four coordinates are required"
-            })
-            return
-        end
-
-        local currentRegions = loadRegionsFromFile()
-        local targetIndex = nil
-        for idx, existing in ipairs(currentRegions) do
-            if existing.id == originalId then
-                targetIndex = idx
-                break
-            end
-        end
-
-        if not targetIndex then
-            sendServerCommand(player, "RegionManager", "RegionUpdateFailed", {
-                reason = "Region '" .. originalId .. "' not found"
-            })
-            return
-        end
-
-        for idx, existing in ipairs(currentRegions) do
-            if idx ~= targetIndex and existing.id == id then
-                sendServerCommand(player, "RegionManager", "RegionUpdateFailed", {
-                    reason = "Region ID '" .. id .. "' already exists"
-                })
-                return
-            end
-        end
-
-        currentRegions[targetIndex] = {
-            id = id,
-            name = name,
-            x1 = args.x1,
-            y1 = args.y1,
-            x2 = args.x2,
-            y2 = args.y2,
-            z = args.z or 0,
-            enabled = args.enabled ~= false,
-            categories = args.categories or {},
-            customProperties = args.customProperties or {}
-        }
-
-        local writeOk = writeRegionsFile(currentRegions)
-        if not writeOk then
-            sendServerCommand(player, "RegionManager", "RegionUpdateFailed", {
-                reason = "Failed to write regions file"
-            })
-            return
-        end
-
-        log("Region '" .. originalId .. "' updated by " .. player:getUsername() .. ", re-initializing all zones...")
-        registerAllRegions()
-
-        local payload = buildZoneBoundariesPayload()
-        RegionManager.Server._cachedBoundariesPayload = payload
-        local allPlayers = getOnlinePlayers()
-        for i = 0, allPlayers:size() - 1 do
-            local p = allPlayers:get(i)
-            sendServerCommand(p, "RegionManager", "AllZoneBoundaries", payload)
-        end
-
-        sendServerCommand(player, "RegionManager", "RegionUpdated", {
-            id = id,
-            name = name,
-            originalId = originalId
-        })
-        log("Region '" .. originalId .. "' successfully updated (new id='" .. id .. "') and broadcast to " ..
-                allPlayers:size() .. " players")
-
+        updateHotRegion(player, args)
     elseif command == "DeleteRegion" then
-        if player:getAccessLevel() == "None" then
-            log("WARNING: Non-admin player " .. player:getUsername() .. " tried to delete a region")
-            sendServerCommand(player, "RegionManager", "RegionDeleteFailed", {
-                reason = "Admin access required"
-            })
-            return
-        end
-
-        local originalId = args.originalId
-        if not originalId or originalId == "" then
-            sendServerCommand(player, "RegionManager", "RegionDeleteFailed", {
-                reason = "Original region ID is required"
-            })
-            return
-        end
-
-        local currentRegions = loadRegionsFromFile()
-        local targetIndex = nil
-        local deletedRegion = nil
-        for idx, existing in ipairs(currentRegions) do
-            if existing.id == originalId then
-                targetIndex = idx
-                deletedRegion = existing
-                break
-            end
-        end
-
-        if not targetIndex then
-            sendServerCommand(player, "RegionManager", "RegionDeleteFailed", {
-                reason = "Region '" .. originalId .. "' not found"
-            })
-            return
-        end
-
-        table.remove(currentRegions, targetIndex)
-
-        local writeOk = writeRegionsFile(currentRegions)
-        if not writeOk then
-            sendServerCommand(player, "RegionManager", "RegionDeleteFailed", {
-                reason = "Failed to write regions file"
-            })
-            return
-        end
-
-        log("Region '" .. originalId .. "' deleted by " .. player:getUsername() .. ", re-initializing all zones...")
-        registerAllRegions()
-
-        local payload = buildZoneBoundariesPayload()
-        RegionManager.Server._cachedBoundariesPayload = payload
-        local allPlayers = getOnlinePlayers()
-        for i = 0, allPlayers:size() - 1 do
-            local p = allPlayers:get(i)
-            sendServerCommand(p, "RegionManager", "AllZoneBoundaries", payload)
-        end
-
-        sendServerCommand(player, "RegionManager", "RegionDeleted", {
-            id = originalId,
-            name = deletedRegion and deletedRegion.name or originalId
-        })
-        log("Region '" .. originalId .. "' successfully deleted and broadcast to " .. allPlayers:size() .. " players")
-
+        deleteHotRegion(player, args)
     elseif command == "ExportConfig" then
         -- Admin command to export config
         if player:getAccessLevel() ~= "None" then
@@ -790,5 +801,9 @@ Events.OnLoadMapZones.Add(OnLoadMapZones)
 Events.OnClientCommand.Add(OnClientCommand)
 
 log("RegionManager Server module loaded")
+
+RegionManager.Server.addHotRegion = addHotRegion
+RegionManager.Server.deleteHotRegion = deleteHotRegion
+RegionManager.Server.updateHotRegion = updateHotRegion
 
 return RegionManager.Server

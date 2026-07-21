@@ -205,7 +205,7 @@ end
 --    IsoDoor.Thump with cognition==1 zombies calls ToggleDoor->ToggleDoorActual
 --    which NPEs on player.isLocalPlayer() when thumper is not an IsoPlayer.
 --    Instead we manually call destroy() when health reaches zero.
-local FORCE_DAMAGE = 24
+local FORCE_DAMAGE = 210
 
 -- Attempt to destroy a door if its health is at or below zero.
 local function destroyIfDead(doorObj)

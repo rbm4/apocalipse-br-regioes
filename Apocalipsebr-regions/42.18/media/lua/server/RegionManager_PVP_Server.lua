@@ -28,38 +28,38 @@ local function OnClientCommand(module, command, player, args)
         return
     end
 
-    if command == "UpdatePvpState" then
-        local username = player:getUsername()
+    -- if command == "UpdatePvpState" then
+    --     local username = player:getUsername()
 
-        log("Received PVP state update from " .. username)
-        log("  Zone: " .. (args.zoneName or "Unknown"))
-        log("  PVP Zone: " .. tostring(args.isPvpZone))
-        log("  Safe Zone: " .. tostring(args.isSafeZone))
-        log("  Safety Enabled: " .. tostring(args.safetyEnabled))
+    --     log("Received PVP state update from " .. username)
+    --     log("  Zone: " .. (args.zoneName or "Unknown"))
+    --     log("  PVP Zone: " .. tostring(args.isPvpZone))
+    --     log("  Safe Zone: " .. tostring(args.isSafeZone))
+    --     log("  Safety Enabled: " .. tostring(args.safetyEnabled))
 
-        -- Broadcast this player's PVP state to all OTHER clients
-        local broadcast = {
-            username = username,
-            zoneId = args.zoneId,
-            zoneName = args.zoneName,
-            isPvpZone = args.isPvpZone,
-            isSafeZone = args.isSafeZone,
-            safetyEnabled = args.safetyEnabled
-        }
+    --     -- Broadcast this player's PVP state to all OTHER clients
+    --     local broadcast = {
+    --         username = username,
+    --         zoneId = args.zoneId,
+    --         zoneName = args.zoneName,
+    --         isPvpZone = args.isPvpZone,
+    --         isSafeZone = args.isSafeZone,
+    --         safetyEnabled = args.safetyEnabled
+    --     }
 
-        -- Send to all players except the sender
-        local players = getOnlinePlayers()
-        local syncAmount = 0
-        for i = 0, players:size() - 1 do
-            local otherPlayer = players:get(i)
-            if otherPlayer and otherPlayer ~= player then
-                sendServerCommand(otherPlayer, "RegionManager", "PvpStateChanged", broadcast)
-                syncAmount = syncAmount + 1
-            end
-        end
+    --     -- Send to all players except the sender
+    --     local players = getOnlinePlayers()
+    --     local syncAmount = 0
+    --     for i = 0, players:size() - 1 do
+    --         local otherPlayer = players:get(i)
+    --         if otherPlayer and otherPlayer ~= player then
+    --             sendServerCommand(otherPlayer, "RegionManager", "PvpStateChanged", broadcast)
+    --             syncAmount = syncAmount + 1
+    --         end
+    --     end
 
-        log("Broadcasted PVP state to " .. syncAmount .. " other players")
-    end
+    --     log("Broadcasted PVP state to " .. syncAmount .. " other players")
+    -- end
 end
 
 -- ============================================================================
