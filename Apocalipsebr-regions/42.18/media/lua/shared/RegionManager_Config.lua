@@ -278,11 +278,11 @@ RegionManager.Config.Regions = { -- Example: Muldraugh Downtown PVP
 }
 
 -- External regions file (read/written by server on startup, managed by external API)
-RegionManager.Config.RegionsFilePath = "RegionManager_Regions.json"
+RegionManager.Config.RegionsFilePath = "RegionManager_Regions.txt"
 
 -- Export/Import paths (relative to Zomboid directory)
-RegionManager.Config.ExportPath = "RegionManager_Export.json"
-RegionManager.Config.ImportPath = "RegionManager_Import.json"
+RegionManager.Config.ExportPath = "RegionManager_Export.txt"
+RegionManager.Config.ImportPath = "RegionManager_Import.txt"
 
 -- ModData key for server-side persistence
 RegionManager.Config.MODDATA_KEY = "RegionManager_RegisteredZones"

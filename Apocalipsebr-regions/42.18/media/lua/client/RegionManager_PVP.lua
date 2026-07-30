@@ -121,7 +121,6 @@ local function onTick(player, currentZones)
             -- Revert the toggle
             player:getSafety():setCooldown(0)
             player:getSafety():toggleSafety()
-            player:getSafety():setCooldown(1500)
 
             -- Sync the corrected state with the server
             -- sendClientCommand("RegionManager", "UpdatePvpState", {
@@ -194,28 +193,8 @@ local function onZoneEntered(player, zoneId, zoneData)
         else
             log("Applied PVP state locally for zone: " .. zoneData.name .. " (Safety=false)")
         end
-    elseif isSafeZone then
-        -- Since version 42.13.2+ safezones were fixed, there is no need to toogle pvp when user enters a non-pvp zone nor control it.
-        -- if not (player:getSafety():isEnabled()) then
-        --     player:getSafety():toggleSafety()
-        -- end
-        RequiredSafetyState[playerNum] = true
-
-        -- if isFlagged then
-        --     log(" FLAGGED player " .. playerNum .. " entered Safe zone: " .. zoneData.name ..
-        --             " (Safety=true, punishment active)")
-        -- else
-        --     log("Applied Safe Zone state locally for zone: " .. zoneData.name .. " (Safety=true)")
-        -- end
     else
-        -- Neutral zone - no PVP state change
-        -- automatic non-pvp zones are generated, the code shouldn't fall in here naturally, 
-        -- zones are always being entered when leaving another one, and if it is a non-pvp
-        -- then the pvp state get's changed to safety = true
-        -- other implementations may use the onExit hook since they will need to manage
-        -- exiting their specific state
-        RequiredSafetyState[playerNum] = nil
-        return
+        RequiredSafetyState[playerNum] = true
     end
 
     -- Notify server to broadcast this player's PVP state to other clients
@@ -241,19 +220,15 @@ local function onZoneExited(player, zoneId, zoneData)
     if not player then
         return
     end
-
+    -- local isPvpZone = (zoneData.pvpEnabled == true)
     -- Note: We don't restore Safety toggle because player will always be in 
     -- either a PVP or Safe zone. The next zone entry will handle the state.
     log("Player exited zone: " .. zoneData.name)
-
-    -- Optional: Notify server about zone exit if needed for tracking
-    -- sendClientCommand("RegionManager", "UpdatePvpState", {
-    --     zoneId = nil,
-    --     zoneName = "None",
-    --     isPvpZone = false,
-    --     isSafeZone = false,
-    --     safetyEnabled = player:getSafety():isEnabled()
-    -- })
+    -- local playerNum = player:getPlayerNum()
+    -- player:getSafety():setCooldown(0)
+    -- if (isPvpZone) then
+    --     RequiredSafetyState[playerNum] = true
+    -- end
 end
 local function getSpecificPlayer(username)
     local allPlayers = getOnlinePlayers()

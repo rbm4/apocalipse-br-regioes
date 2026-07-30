@@ -25,8 +25,8 @@ end
 local BASE_MAP = {
     x1 = -1780,
     y1 = -2272,
-    x2 = 20455,
-    y2 = 16541
+    x2 = 21143,
+    y2 = 18513
 }
 
 -- Rectangle subtraction algorithm (INCLUSIVE coordinates: both x1,y1 and x2,y2 are part of the rectangle)

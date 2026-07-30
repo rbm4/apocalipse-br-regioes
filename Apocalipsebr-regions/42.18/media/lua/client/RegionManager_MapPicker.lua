@@ -837,10 +837,13 @@ function ISRegionMapPicker:getPropertiesFromForm(baseProps)
         end
     end
 
-    local function parseNum(entry)
-        return tonumber(entry:getText()) or 0
+    local function setNumProperty(propName, entry)
+        if entry then
+            props[propName] = tonumber(entry:getText()) or 0
+        end
+        return props[propName] or 0
     end
-    local maxHits = math.floor(parseNum(self.maxHitsEntry))
+    local maxHits = math.floor(setNumProperty("maxHits", self.maxHitsEntry))
     if maxHits < 1 then
         maxHits = 1
     end
@@ -850,35 +853,9 @@ function ISRegionMapPicker:getPropertiesFromForm(baseProps)
     props.pvpEnabled = self.boolTickBox:isSelected(1)
     props.announceEntry = self.boolTickBox:isSelected(2)
     props.announceExit = self.boolTickBox:isSelected(3)
-    props.sprinterChance = parseNum(self.sprinterEntry)
-    props.shamblerChance = parseNum(self.shamblerEntry)
-    props.hawkVisionChance = parseNum(self.hawkVisionEntry)
-    props.badVisionChance = parseNum(self.badVisionEntry)
-    props.normalVisionChance = parseNum(self.normalVisionEntry)
-    props.poorVisionChance = parseNum(self.poorVisionEntry)
-    props.randomVisionChance = parseNum(self.randomVisionEntry)
-    props.goodHearingChance = parseNum(self.goodHearEntry)
-    props.badHearingChance = parseNum(self.badHearEntry)
-    props.pinpointHearingChance = parseNum(self.pinpointHearingEntry)
-    props.normalHearingChance = parseNum(self.normalHearingEntry)
-    props.poorHearingChance = parseNum(self.poorHearingEntry)
-    props.randomHearingChance = parseNum(self.randomHearingEntry)
-    props.resistantChance = parseNum(self.resistEntry)
-    props.toughnessChance = parseNum(self.toughnessEntry)
-    props.normalToughnessChance = parseNum(self.normalToughnessEntry)
-    props.fragileChance = parseNum(self.fragileEntry)
-    props.randomToughnessChance = parseNum(self.randomToughnessEntry)
-    props.superhumanChance = parseNum(self.superhumanEntry)
-    props.weakChance = parseNum(self.weakEntry)
-    props.navigationChance = parseNum(self.navigationEntry)
-    props.memoryLongChance = parseNum(self.memoryLongEntry)
-    props.memoryNormalChance = parseNum(self.memoryNormalEntry)
-    props.memoryShortChance = parseNum(self.memoryShortEntry)
-    props.memoryNoneChance = parseNum(self.memoryNoneEntry)
-    props.memoryRandomChance = parseNum(self.memoryRandomEntry)
-    -- Legacy aliases still consumed by server helper (second toughness lanes).
-    props.normalToughness = parseNum(self.normalToughnessEntry)
-    props.randomToughness = parseNum(self.randomToughnessEntry)
+    setNumProperty("sprinterChance", self.sprinterEntry)
+    setNumProperty("shamblerChance", self.shamblerEntry)
+    setNumProperty("toughnessChance", self.toughnessEntry)
     props.maxHits = maxHits
     props.message = self.messageEntry:getText() or ""
 
