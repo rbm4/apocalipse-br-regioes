@@ -116,11 +116,6 @@ local function RegionManagerZombie_OnZombieCreate(persistentID, x, y)
 
     local globalData = Apocalipse_TSY_GetGlobalModData()
 
-    -- Return cached decision when available
-    if globalData.zombies[persistentID] then
-        return globalData.zombies[persistentID]
-    end
-
     -- Find overlapping regions
     local regions = ZombieHelper.FindRegionsAt(x, y)
     local hasRegions = false

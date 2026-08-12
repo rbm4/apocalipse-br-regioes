@@ -5,10 +5,10 @@ Sandbox_JA = {
     Sandbox_Apocalipse_TSY_TimeMode = "叫びの時間帯 (昼/夜)",
     Sandbox_Apocalipse_TSY_TimeMode_tooltip = "スプリンターが特別な叫びを使用できる時間帯を設定します。0 = 昼夜; 1 = 昼のみ; 2 = 夜のみ。例：「2」を選ぶと昼は静かで、夜はより緊張感のある雰囲気になります。",
 
-    Sandbox_Apocalipse_TSY_ScreechChance = "発見時の叫び確率 (%)",
+    Sandbox_Apocalipse_TSY_ScreechChance = "発見時の叫び確率 (%%)",
     Sandbox_Apocalipse_TSY_ScreechChance_tooltip = "スプリンターが初めてあなたを見たときに叫ぶ確率。0 = 叫ばない; 100 = ほとんどのスプリンターがすぐに叫ぶ。例：60 は 10 回中 6 回ほどの確率で叫びます。",
 
-    Sandbox_Apocalipse_TSY_ChaseScreechChance = "追跡中の叫び確率 (%)",
+    Sandbox_Apocalipse_TSY_ChaseScreechChance = "追跡中の叫び確率 (%%)",
     Sandbox_Apocalipse_TSY_ChaseScreechChance_tooltip = "スプリンターがすでにあなたを追っているときに叫ぶ追加の確率。5〜20 の低い値でたまに叫ぶ程度に、値を高くすると混乱したような追跡になります。連続的な叫びを避けるためにクールダウン時間と組み合わせてください。",
 
     Sandbox_Apocalipse_TSY_ChaseCooldownHours = "追跡中の叫び間隔 (時間)",

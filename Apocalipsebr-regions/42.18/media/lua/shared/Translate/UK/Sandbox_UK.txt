@@ -5,10 +5,10 @@ Sandbox_UK = {
     Sandbox_Apocalipse_TSY_TimeMode = "Scream Window (Day/Night)",
     Sandbox_Apocalipse_TSY_TimeMode_tooltip = "Defines when sprinters can use their special scream. 0 = day and night; 1 = only during the day; 2 = only at night. Example: use ‘2’ for calm days and tense, terrifying nights.",
 
-    Sandbox_Apocalipse_TSY_ScreechChance = "Chance to Scream on Sight (%)",
+    Sandbox_Apocalipse_TSY_ScreechChance = "Chance to Scream on Sight (%%)",
     Sandbox_Apocalipse_TSY_ScreechChance_tooltip = "The probability that a sprinter will let out a discovery scream the first time they spot you. 0 = never screams; 100 = almost every sprinter screams immediately. Example: 60 means around six out of ten encounters start with a scream.",
 
-    Sandbox_Apocalipse_TSY_ChaseScreechChance = "Chance to Scream During Chase (%)",
+    Sandbox_Apocalipse_TSY_ChaseScreechChance = "Chance to Scream During Chase (%%)",
     Sandbox_Apocalipse_TSY_ChaseScreechChance_tooltip = "Additional chance for a sprinter to scream while already chasing you. Low values (5–20) produce occasional screams; higher ones make chases loud and chaotic. Combine with the cooldown to prevent endless noise.",
 
     Sandbox_Apocalipse_TSY_ChaseCooldownHours = "Cooldown Between Chase Screams (Hours)",

@@ -5,10 +5,10 @@ Sandbox_FI = {
     Sandbox_Apocalipse_TSY_TimeMode = "Huutamisen ajankohta (päivä/yö)",
     Sandbox_Apocalipse_TSY_TimeMode_tooltip = "Määrittää, mihin aikaan päivästä sprinterit voivat käyttää erikoishuutoaan. 0 = päivä ja yö; 1 = vain päivä; 2 = vain yö. Esimerkki: käytä arvoa '2', jos haluat rauhalliset päivät ja paljon intensiivisemmät yöt.",
 
-    Sandbox_Apocalipse_TSY_ScreechChance = "Mahdollisuus huutaa nähdessään (%)",
+    Sandbox_Apocalipse_TSY_ScreechChance = "Mahdollisuus huutaa nähdessään (%%)",
     Sandbox_Apocalipse_TSY_ScreechChance_tooltip = "Todennäköisyys, että sprinteri päästää löytöhuudon ensimmäisellä kerralla, kun se näkee sinut. 0 = ei koskaan huuda; 100 = melkein jokainen huutaa heti nähdessään sinut. Esimerkiksi 60 tarkoittaa, että noin 6 kymmenestä kohtaamisesta alkaa huudolla.",
 
-    Sandbox_Apocalipse_TSY_ChaseScreechChance = "Mahdollisuus huutaa takaa-ajon aikana (%)",
+    Sandbox_Apocalipse_TSY_ChaseScreechChance = "Mahdollisuus huutaa takaa-ajon aikana (%%)",
     Sandbox_Apocalipse_TSY_ChaseScreechChance_tooltip = "Lisätodennäköisyys huudolle, kun sprinteri jo jahtaa sinua. Käytä pieniä arvoja (5–20) satunnaisiin huutoihin ja korkeita arvoja, jos haluat kaaottisen, meluisan tunnelman. Yhdistä asetukseen 'Tauko huutojen välillä', jotta ääni ei muutu jatkuvaksi huudoksi.",
 
     Sandbox_Apocalipse_TSY_ChaseCooldownHours = "Tauko huutojen välillä takaa-ajossa (tuntia)",

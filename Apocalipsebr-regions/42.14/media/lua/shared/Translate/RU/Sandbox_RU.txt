@@ -5,10 +5,10 @@ Sandbox_RU = {
     Sandbox_Apocalipse_TSY_TimeMode = "Окно крика (день/ночь)",
     Sandbox_Apocalipse_TSY_TimeMode_tooltip = "Определяет, в какое время суток спринтеры могут использовать особый крик. 0 = день и ночь; 1 = только днем; 2 = только ночью. Пример: используйте «2», если хотите спокойные дни и напряженные ночи.",
 
-    Sandbox_Apocalipse_TSY_ScreechChance = "Шанс крика при обнаружении (%)",
+    Sandbox_Apocalipse_TSY_ScreechChance = "Шанс крика при обнаружении (%%)",
     Sandbox_Apocalipse_TSY_ScreechChance_tooltip = "Вероятность, что спринтер издаст крик, когда впервые вас увидит. 0 = никогда не кричит; 100 = почти каждый спринтер кричит сразу. Пример: 60 означает, что примерно 6 из 10 встреч начнутся с крика.",
 
-    Sandbox_Apocalipse_TSY_ChaseScreechChance = "Шанс крика во время погони (%)",
+    Sandbox_Apocalipse_TSY_ChaseScreechChance = "Шанс крика во время погони (%%)",
     Sandbox_Apocalipse_TSY_ChaseScreechChance_tooltip = "Дополнительный шанс на крик, когда спринтер уже бежит за вами. Используйте низкие значения (5–20) для редких криков и высокие - для громких, хаотичных погонь. Комбинируйте с интервалом между криками, чтобы избежать постоянного шума.",
 
     Sandbox_Apocalipse_TSY_ChaseCooldownHours = "Интервал между криками во время погони (часы)",

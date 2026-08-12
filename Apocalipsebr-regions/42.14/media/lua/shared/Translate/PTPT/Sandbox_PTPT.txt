@@ -6,11 +6,11 @@ Sandbox_PTPT = {
 
     Sandbox_Apocalipse_TSY_TimeMode_tooltip = "Define em que período do dia os corredores podem usar o grito especial. 0 = dia e noite; 1 = só de dia; 2 = só à noite. Exemplo: use '2' se quiser dias mais tranquilos e noites bem mais tensas.",
 
-    Sandbox_Apocalipse_TSY_ScreechChance = "Probabilidade de grito ao ver-te (%)",
+    Sandbox_Apocalipse_TSY_ScreechChance = "Probabilidade de grito ao ver-te (%%)",
 
     Sandbox_Apocalipse_TSY_ScreechChance_tooltip = "Probabilidade de um corredor soltar o grito de descoberta na primeira vez que te vê. 0 = nunca grita; 100 = praticamente todos os corredores gritam assim que te veem. Exemplo: 60 significa que, em média, 6 em cada 10 encontros começam com um grito.",
 
-    Sandbox_Apocalipse_TSY_ChaseScreechChance = "Chance de grito em perseguição (%)",
+    Sandbox_Apocalipse_TSY_ChaseScreechChance = "Chance de grito em perseguição (%%)",
 
     Sandbox_Apocalipse_TSY_ChaseScreechChance_tooltip = "Chance extra de grito enquanto o corredor já está correndo atrás de você. Use valores baixos (5–20) para gritos ocasionais e valores altos para perseguições bem barulhentas. Combine com o intervalo mínimo entre gritos para não virar gritaria constante.",
 

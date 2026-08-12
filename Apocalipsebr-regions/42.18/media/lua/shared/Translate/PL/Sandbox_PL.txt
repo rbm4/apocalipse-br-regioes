@@ -5,10 +5,10 @@ Sandbox_PL = {
     Sandbox_Apocalipse_TSY_TimeMode = "Okno krzyku (dzień/noc)",
     Sandbox_Apocalipse_TSY_TimeMode_tooltip = "Określa, w jakiej porze dnia sprinterzy mogą używać swojego specjalnego krzyku. 0 = dzień i noc; 1 = tylko w dzień; 2 = tylko w nocy. Przykład: użyj '2', jeśli chcesz spokojne dni i znacznie bardziej napięte noce.",
 
-    Sandbox_Apocalipse_TSY_ScreechChance = "Szansa na krzyk przy zauważeniu (%)",
+    Sandbox_Apocalipse_TSY_ScreechChance = "Szansa na krzyk przy zauważeniu (%%)",
     Sandbox_Apocalipse_TSY_ScreechChance_tooltip = "Prawdopodobieństwo, że sprinter wyda krzyk, gdy po raz pierwszy cię zobaczy. 0 = nigdy nie krzyczy; 100 = prawie każdy sprinter krzyczy od razu. Przykład: 60 oznacza, że około 6 na 10 spotkań zacznie się krzykiem.",
 
-    Sandbox_Apocalipse_TSY_ChaseScreechChance = "Szansa na krzyk podczas pościgu (%)",
+    Sandbox_Apocalipse_TSY_ChaseScreechChance = "Szansa na krzyk podczas pościgu (%%)",
     Sandbox_Apocalipse_TSY_ChaseScreechChance_tooltip = "Dodatkowa szansa na krzyk, gdy sprinter już cię ściga. Użyj niskich wartości (5–20), by krzyki były sporadyczne, a wysokich - by pościgi były bardziej chaotyczne. Połącz z minimalnym odstępem między krzykami, by uniknąć ciągłego wrzasku.",
 
     Sandbox_Apocalipse_TSY_ChaseCooldownHours = "Odstęp między krzykami podczas pościgu (godziny)",

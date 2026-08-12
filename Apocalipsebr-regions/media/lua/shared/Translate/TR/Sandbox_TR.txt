@@ -5,10 +5,10 @@ Sandbox_TR = {
     Sandbox_Apocalipse_TSY_TimeMode = "Çığlık Zaman Aralığı (gündüz/gece)",
     Sandbox_Apocalipse_TSY_TimeMode_tooltip = "Sprinterların özel çığlıklarını hangi zamanda kullanabileceğini belirler. 0 = gündüz ve gece; 1 = sadece gündüz; 2 = sadece gece. Örnek: '2' seçerseniz gündüzleri sakin, geceleri daha gergin bir atmosfer olur.",
 
-    Sandbox_Apocalipse_TSY_ScreechChance = "Seni gördüğünde çığlık atma olasılığı (%)",
+    Sandbox_Apocalipse_TSY_ScreechChance = "Seni gördüğünde çığlık atma olasılığı (%%)",
     Sandbox_Apocalipse_TSY_ScreechChance_tooltip = "Sprinterın seni ilk gördüğünde çığlık atma olasılığı. 0 = asla bağırmaz; 100 = neredeyse her sprinter seni görür görmez çığlık atar. Örnek: 60 değeri, her 10 karşılaşmadan yaklaşık 6’sının çığlıkla başladığı anlamına gelir.",
 
-    Sandbox_Apocalipse_TSY_ChaseScreechChance = "Kovalarken çığlık atma olasılığı (%)",
+    Sandbox_Apocalipse_TSY_ChaseScreechChance = "Kovalarken çığlık atma olasılığı (%%)",
     Sandbox_Apocalipse_TSY_ChaseScreechChance_tooltip = "Sprinter seni kovalarken fazladan çığlık atma olasılığı. Düşük değerler (5–20) ara sıra bağırmalar için; yüksek değerler kaotik kovalamacalar için uygundur. Sürekli gürültüyü önlemek için minimum aralıkla birlikte ayarlayın.",
 
     Sandbox_Apocalipse_TSY_ChaseCooldownHours = "Kovalamada çığlık arası bekleme süresi (saat)",
